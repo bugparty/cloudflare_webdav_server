@@ -1,0 +1,1268 @@
+OPTIONS / HTTP/1.1
+Host: localhost:8080
+Accept: */*
+Content-Length: 0
+Connection: keep-alive
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+
+
+HTTP/1.1 200 OK
+Accept-Ranges: bytes
+Allow: OPTIONS, LOCK, DELETE, PROPPATCH, COPY, MOVE, UNLOCK, PROPFIND
+Dav: 1, 2
+Ms-Author-Via: DAV
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:32 GMT
+Content-Length: 0
+
+
+PROPFIND / HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 401 Unauthorized
+Content-Type: text/plain
+Www-Authenticate: Basic realm=""
+Date: Fri, 04 Jul 2025 02:03:32 GMT
+Content-Length: 17
+
+401 Unauthorized
+
+PROPFIND / HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 207 Multi-Status
+Accept-Ranges: bytes
+Content-Type: text/xml; charset=utf-8
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:32 GMT
+Content-Length: 495
+
+<?xml version="1.0" encoding="UTF-8"?><D:multistatus xmlns:D="DAV:"><D:response><D:href>/</D:href><D:propstat><D:prop><D:getlastmodified>Fri, 04 Jul 2025 01:59:18 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response></D:multistatus>
+PROPFIND / HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 175
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:quota-available-bytes/>
+<D:quota-used-bytes/>
+<D:quota/>
+<D:quotaused/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 207 Multi-Status
+Accept-Ranges: bytes
+Content-Type: text/xml; charset=utf-8
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:32 GMT
+Content-Length: 350
+
+<?xml version="1.0" encoding="UTF-8"?><D:multistatus xmlns:D="DAV:"><D:response><D:href>/</D:href><D:propstat><D:prop><D:quota-available-bytes></D:quota-available-bytes><D:quota-used-bytes></D:quota-used-bytes><D:quota></D:quota><D:quotaused></D:quotaused></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response></D:multistatus>
+PROPFIND / HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 207 Multi-Status
+Accept-Ranges: bytes
+Content-Type: text/xml; charset=utf-8
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:32 GMT
+Content-Length: 495
+
+<?xml version="1.0" encoding="UTF-8"?><D:multistatus xmlns:D="DAV:"><D:response><D:href>/</D:href><D:propstat><D:prop><D:getlastmodified>Fri, 04 Jul 2025 01:59:18 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response></D:multistatus>
+PROPFIND / HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 207 Multi-Status
+Accept-Ranges: bytes
+Content-Type: text/xml; charset=utf-8
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:32 GMT
+Content-Length: 495
+
+<?xml version="1.0" encoding="UTF-8"?><D:multistatus xmlns:D="DAV:"><D:response><D:href>/</D:href><D:propstat><D:prop><D:getlastmodified>Fri, 04 Jul 2025 01:59:18 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response></D:multistatus>
+PROPFIND /._. HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:32 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /._. HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:32 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND / HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 207 Multi-Status
+Accept-Ranges: bytes
+Content-Type: text/xml; charset=utf-8
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:32 GMT
+Content-Length: 495
+
+<?xml version="1.0" encoding="UTF-8"?><D:multistatus xmlns:D="DAV:"><D:response><D:href>/</D:href><D:propstat><D:prop><D:getlastmodified>Fri, 04 Jul 2025 01:59:18 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response></D:multistatus>
+PROPFIND /.DS_Store HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:32 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /.metadata_never_index_unless_rootfs HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /.metadata_never_index HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /.metadata_direct_scope_only HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /.hidden HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /.Spotlight-V100 HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND / HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 1
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 207 Multi-Status
+Accept-Ranges: bytes
+Content-Type: text/xml; charset=utf-8
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Transfer-Encoding: chunked
+
+800
+<?xml version="1.0" encoding="UTF-8"?><D:multistatus xmlns:D="DAV:"><D:response><D:href>/</D:href><D:propstat><D:prop><D:getlastmodified>Fri, 04 Jul 2025 01:59:18 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/._.DS_Store</D:href><D:propstat><D:prop><D:getlastmodified>Mon, 24 Jun 2024 17:42:52 GMT</D:getlastmodified><D:getcontentlength>368</D:getcontentlength><D:resourcetype></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/.recycle/</D:href><D:propstat><D:prop><D:getlastmodified>Wed, 21 Aug 2024 23:56:56 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/Apps/</D:href><D:propstat><D:prop><D:getlastmodified>Mon, 27 May 2024 06:43:46 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/Attachments/</D:href><D:propstat><D:prop><D:getlastmodified>Thu, 26 Dec 2024 00:01:11 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creati
+555
+ondate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/Document.docx</D:href><D:propstat><D:prop><D:getlastmodified>Mon, 27 May 2024 06:43:54 GMT</D:getlastmodified><D:getcontentlength>10501</D:getcontentlength><D:resourcetype></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/Microsoft%20Copilot%20Chat%20Files/</D:href><D:propstat><D:prop><D:getlastmodified>Sun, 26 Jan 2025 08:37:32 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/videos2/</D:href><D:propstat><D:prop><D:getlastmodified>Mon, 27 May 2024 07:18:20 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response></D:multistatus>
+0
+
+
+PROPFIND / HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 1
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 207 Multi-Status
+Accept-Ranges: bytes
+Content-Type: text/xml; charset=utf-8
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Transfer-Encoding: chunked
+
+800
+<?xml version="1.0" encoding="UTF-8"?><D:multistatus xmlns:D="DAV:"><D:response><D:href>/</D:href><D:propstat><D:prop><D:getlastmodified>Fri, 04 Jul 2025 01:59:18 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/._.DS_Store</D:href><D:propstat><D:prop><D:getlastmodified>Mon, 24 Jun 2024 17:42:52 GMT</D:getlastmodified><D:getcontentlength>368</D:getcontentlength><D:resourcetype></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/.recycle/</D:href><D:propstat><D:prop><D:getlastmodified>Wed, 21 Aug 2024 23:56:56 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/Apps/</D:href><D:propstat><D:prop><D:getlastmodified>Mon, 27 May 2024 06:43:46 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/Attachments/</D:href><D:propstat><D:prop><D:getlastmodified>Thu, 26 Dec 2024 00:01:11 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creati
+555
+ondate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/Document.docx</D:href><D:propstat><D:prop><D:getlastmodified>Mon, 27 May 2024 06:43:54 GMT</D:getlastmodified><D:getcontentlength>10501</D:getcontentlength><D:resourcetype></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/Microsoft%20Copilot%20Chat%20Files/</D:href><D:propstat><D:prop><D:getlastmodified>Sun, 26 Jan 2025 08:37:32 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/videos2/</D:href><D:propstat><D:prop><D:getlastmodified>Mon, 27 May 2024 07:18:20 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response></D:multistatus>
+0
+
+
+PROPFIND /._.recycle HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /._Apps HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /._Attachments HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /._Document.docx HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /._Microsoft%20Copilot%20Chat%20Files HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /._videos2 HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND / HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 1
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 207 Multi-Status
+Accept-Ranges: bytes
+Content-Type: text/xml; charset=utf-8
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Transfer-Encoding: chunked
+
+800
+<?xml version="1.0" encoding="UTF-8"?><D:multistatus xmlns:D="DAV:"><D:response><D:href>/</D:href><D:propstat><D:prop><D:getlastmodified>Fri, 04 Jul 2025 01:59:18 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/._.DS_Store</D:href><D:propstat><D:prop><D:getlastmodified>Mon, 24 Jun 2024 17:42:52 GMT</D:getlastmodified><D:getcontentlength>368</D:getcontentlength><D:resourcetype></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/.recycle/</D:href><D:propstat><D:prop><D:getlastmodified>Wed, 21 Aug 2024 23:56:56 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/Apps/</D:href><D:propstat><D:prop><D:getlastmodified>Mon, 27 May 2024 06:43:46 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/Attachments/</D:href><D:propstat><D:prop><D:getlastmodified>Thu, 26 Dec 2024 00:01:11 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creati
+555
+ondate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/Document.docx</D:href><D:propstat><D:prop><D:getlastmodified>Mon, 27 May 2024 06:43:54 GMT</D:getlastmodified><D:getcontentlength>10501</D:getcontentlength><D:resourcetype></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/Microsoft%20Copilot%20Chat%20Files/</D:href><D:propstat><D:prop><D:getlastmodified>Sun, 26 Jan 2025 08:37:32 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response><D:response><D:href>/videos2/</D:href><D:propstat><D:prop><D:getlastmodified>Mon, 27 May 2024 07:18:20 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response></D:multistatus>
+0
+
+
+PROPFIND / HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 207 Multi-Status
+Accept-Ranges: bytes
+Content-Type: text/xml; charset=utf-8
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 495
+
+<?xml version="1.0" encoding="UTF-8"?><D:multistatus xmlns:D="DAV:"><D:response><D:href>/</D:href><D:propstat><D:prop><D:getlastmodified>Fri, 04 Jul 2025 01:59:18 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response></D:multistatus>
+PROPFIND /.DS_Store HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PUT /.DS_Store HTTP/1.1
+Host: localhost:8080
+Accept: */*
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 0
+Connection: keep-alive
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+
+
+HTTP/1.1 201 Created
+Accept-Ranges: bytes
+Etag: "184eea052a5a52000"
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 7
+Content-Type: text/plain; charset=utf-8
+
+Created
+DELETE /._.DS_Store HTTP/1.1
+Host: localhost:8080
+Accept: */*
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 0
+Connection: keep-alive
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+
+
+HTTP/1.1 204 No Content
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+
+
+LOCK /.DS_Store HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml; charset="utf-8"
+Depth: 0
+Timeout: Second-600
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 229
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:lockinfo xmlns:D="DAV:">
+<D:lockscope><D:exclusive/></D:lockscope>
+<D:locktype><D:write/></D:locktype>
+<D:owner>
+<D:href>http://www.apple.com/webdav_fs/</D:href>
+</D:owner>
+</D:lockinfo>
+
+HTTP/1.1 200 OK
+Accept-Ranges: bytes
+Content-Type: application/xml; charset=utf-8
+Lock-Token: <1751594361>
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 454
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:prop xmlns:D="DAV:"><D:lockdiscovery><D:activelock>
+	<D:locktype><D:write/></D:locktype>
+	<D:lockscope><D:exclusive/></D:lockscope>
+	<D:depth>0</D:depth>
+	<D:owner>
+<D:href>http://www.apple.com/webdav_fs/</D:href>
+</D:owner>
+	<D:timeout>Second-600</D:timeout>
+	<D:locktoken><D:href>1751594361</D:href></D:locktoken>
+	<D:lockroot><D:href>/.DS_Store</D:href></D:lockroot>
+</D:activelock></D:lockdiscovery></D:prop>
+UNLOCK /.DS_Store HTTP/1.1
+Host: localhost:8080
+Lock-Token: <1751594361>
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 0
+Connection: keep-alive
+
+
+HTTP/1.1 204 No Content
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+
+
+PROPFIND /._Document.docx HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /._.DS_Store HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /._.DS_Store HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PUT /._.DS_Store HTTP/1.1
+Host: localhost:8080
+Accept: */*
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 0
+Connection: keep-alive
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+
+
+HTTP/1.1 201 Created
+Accept-Ranges: bytes
+Etag: "184eea052a5a52000"
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 7
+Content-Type: text/plain; charset=utf-8
+
+Created
+LOCK /._.DS_Store HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml; charset="utf-8"
+Depth: 0
+Timeout: Second-600
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 229
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:lockinfo xmlns:D="DAV:">
+<D:lockscope><D:exclusive/></D:lockscope>
+<D:locktype><D:write/></D:locktype>
+<D:owner>
+<D:href>http://www.apple.com/webdav_fs/</D:href>
+</D:owner>
+</D:lockinfo>
+
+HTTP/1.1 200 OK
+Accept-Ranges: bytes
+Content-Type: application/xml; charset=utf-8
+Lock-Token: <1751594363>
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 456
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:prop xmlns:D="DAV:"><D:lockdiscovery><D:activelock>
+	<D:locktype><D:write/></D:locktype>
+	<D:lockscope><D:exclusive/></D:lockscope>
+	<D:depth>0</D:depth>
+	<D:owner>
+<D:href>http://www.apple.com/webdav_fs/</D:href>
+</D:owner>
+	<D:timeout>Second-600</D:timeout>
+	<D:locktoken><D:href>1751594363</D:href></D:locktoken>
+	<D:lockroot><D:href>/._.DS_Store</D:href></D:lockroot>
+</D:activelock></D:lockdiscovery></D:prop>
+PROPFIND /._Apps HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /.ql_disablecache HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /._Attachments HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:33 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+GET /Document.docx HTTP/1.1
+Host: localhost:8080
+Accept: */*
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Connection: keep-alive
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+
+
+HTTP/1.1 200 OK
+Accept-Ranges: bytes
+Content-Length: 10501
+Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+Etag: "17d34570dcb824002905"
+Last-Modified: Mon, 27 May 2024 06:43:54 GMT
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:35 GMT
+
+PK........y..XRZ>.L...........[Content_Types].xml..MN.0...by[%nY ..v.l.....LR.......Xp$..$i#.J.h........2.|..O..ak.Q;..Q:...r..e.WX$w|:..w.".V.3.D..BD..J..y.T)\.$.k(...M. n..[..E..`..'.G(.. {......D......q...J"....?(.......K....8.G.M.W.A.B'.t.l&.>......\.N.*...}.$uE..t..... F:...]....z.D.............F..s..
+,^....y....s.0p...u.
+.E..9:;Hcs.I...|.........:..=..=.^.$..'..V.!?...M7..PK..........IJ...w}...v.......docProps/app.xml.S.N.0...(.6)..Um.j..xI-p^.....-{...q.....H.TpB...Y.............Z'.Z..i.g...B5.|G..2.... ..e.G._U.0.G.
+Z..2...2o...(.k..7...L.m....)t]..k.v.**.....wB..O.A0O..7..(.,.s...9...O.1..&.[.aU...u...t.,2................S......1R0 .P..`V;]S...fA&n.w.]...d;+h.....q+....T'..........
+..+.FU.t.[.X.....}V....'..k ..9.Osx..n...._........n.X...s`e8.......'......jv>-.7.<....32X...$.\S..a Rz.....PK........y..XK...A.../.......docProps/core.xml..MN.0....y..I..XI..g....@..=mC.;......G.
+.n.~..W..7..<.o..|.6..XW.].8b$.-....$[\.32.
+i,.Z....\0.h..,.....v[.D......hA..q.S2z.l..l.....zt.}....K.......\C+.Z;.Z..k.p^v..T=(Kc[...:!7b.{....B	.t.,..h.*..Xc...{.}z.....^{c.;*
+..u....*>.....
+. ._;(.I..._,.H..$
+Y.&..My:....Y.gg.cA.q...0.e..9NB6.Y...r....a}#.@>.........2.
+.s..'PK........y..X.Vu~6....	......word/fontTable.xml..]n.0...b...	?..iE.H+..a..0.C....c..m..H{....h#.M..e.D...............N:P..4.0J..6Qf...Oo....&..52..	.......x Xm`.EL3..Y.....0..4.L....O.	4w?......^.U..!.......B.i..\Z.....>p2G.5...ZZ..Zi]R8+$..X.G....0....J8.6..<L.Q.....O:?.....k@.....Z:^.....d?...)......PI?..%a....d.q<.r.>F ^....d.H.;..Z.y.!.D.......s..cDp.H.2I....^u#..I.=m.`.....|.s.v.N..X.!.v<.)..bc.....V....J.q...V.&.r..C..R.4.By....w......`f.k..g.W.Z.c$......).U..W.D...."...W...Hx..7
+..::~(-.|.%.n57W.Dl.:.(..3......Z.....Fn..aG......ji..|U.._...'......W..........2/...TP..pE..BF...S.D....YJs...|...VF.....PK........y..X.Q:Z............word/settings.xml.V]n.6.....:...q.8...w....:=.%R......x....=R...$Zv.,.,.I.|3..r.......3g..hC.....0..($.b=
+k[.&a`,..1).4...~...f.X.J&..a2^L..Z.E.)*.......K.9.....G..V.Br.,.).v.%..8.h$8.".(...Z.YZg........B...5....D..c.	...0.U......Xy.....p......t.R...).9..eA...q....w..".....].
+.....t...<....a.d.B.4.H..HC./..8s.......r...K,2;N...
+..c.{&.<.9.d..Q..<..#*..2...,.d./..".*d..."._..Q...0...S...4
+....G...x...<....6SD.p.`i
+aiE...D5..(_Y.@g.`.........D..*..3)...+b...3.M....4..?....&.q..h.-%....jMO/T....#./=I...b.....;F....~#......@.l........\..{..SdA...R?.[....jI...^`....F..h.@.%K."...).'.0|...q.........O...o.g....`.|O".....Tx....$G...=:.t.....L.G....QsR./l.....:.m1\..{>w...M.Zu.V#.v...i.m....{...jo'`..`.._6..Y_.mf....?..o.2..?W..L.\S..)..6_....uec...o.~A..|.tX.`I.5/.p..vw.e....]z.e/K.,.e#/.........{...O0f....dLn	....D].L.......\.V.mF.l2..;.`j..NQ...[...........);.i.c
+...#~d....h...(..j..~.^t.3j.b*X.Vj....q.aY...B...$..Z.......n.a...._I....=..G.._.E<..]....._..m:.L...`q....yrwu..........W)...8..~....Q..|.?PK........y..X..|.............word/styles.xml...v.6.._.KW3.....U..q.q:I....."!.1Ehx..y...G.W..<..&hnr[v.Y..%
+.@..7.y........6...G./........CWx~x{.K......	.=......x......_..C.cG...W......N...~?v.|...6...X...\.....wy.^D^.x:8..m#..8..........7...-.....6,......Ew..D..,..~.'..~:-0Q.J..7.M7<Lt.~..I.a...qA.oB...M..6..KL....;......4.8.$G...
+.f.\.....I.488.......c.......[.H...sdY..5..=g..z....-...RuG
+.(.8Z.'.=.....)..).y.}.W,
+.X}....c.I..N.I...b...7...../k.<.c.'.....[8....g....wj..'....'K....%.~e.Yo8........o./yx...Y.Y..;..J}......N..u.~.......~.Uo.....*.........
+X.....9UB.4.E-......=/C....Y..[...p..w..
+g=].....W./"...z.E..5........a..=........}..;.G./\.....l.GC.{o..|.....2%.'U P.N.]...?.....
+..L.zgp.X...JFlt@V.....5..V..h5M.V..h5..V..h5-..&?..T0h.}.4....@c*..
+4....@s*P..i.%.......f
+*0.$..`N...).
+.">...x*0..T`..)..2.y/
+.&.q+!.P$.I.7...%Lg.D@5...f?)8Y..'..8...`.4.m.N......rV.m...{.y...b...y.HI.x.F!.....G<t9..'....	...b.n.-....u..H..Q.l.l...|...an$(..F.,>.1A.)..:
+.N..D4.4. .....Bs....!......).Q.V.....G.w.@%...G.w9...r.A...I...(.....@.$....
+.\..LB.AW..E.6b....o...^.k.=87$S]."[...r!w..S.N......R9..Ry......\K...%Q.s...J.#..k......x,!.i;+.......\...I-y/....v.4m.#p.a..m`..hg .;..|........... ...#D^'...........n.k..1` ...E..G...OW..C"...l..8..........Ui...".k.$bC...%..7..+Q..e..>P..9..%M..)f..%<*.\...O3.j....R..#.]E<..(.T.k...d6...^.#......E.:.D.....q.1N._.K..>	.....i..a..0A...#XA...V.ZS9e..L..{<.......E...w.v....q.$.e.T1..@D.4 ...H......E.n..t.5.r.5.|.)G..R.....E.G......idZh....F...UA.... .Fp}PF.Z..4..F.0.:ud.......7M#.o.F6.Fo..Z..2..c0....$.}..o."b....m.o..Q..w....uE..u.$+.t....3.....%]....e..UY..Auhn7......=VN.l...W.s.Z...l.U.a_g7....nH.c....u.\....&G...X."..+........O_y~.).
+..........q...e.^.I....i.....^.Y....y.....i.9....rD.jGR..Z...v<..++..Re...8..O{.q.]W..."5t....Jv..Sv..\vLs....v....q.!.GN...k.	a.<........".C{/.Wa..J..qVl/..;.y..3.G";.yH.3..&ky\..c.G+;.y..3..................._]V	vF......-d.m.e%ag.l....-..m..x.B...p...-. m...l.1.l.1x.B......-d.m..x.........b.....m!.o[p.&.....-...-...-..m..x.B......-d.m..8....l.1x.B......-...k[.@...Z..bZ..b.....m!.o[....2.....mA.v....m!.o[....<>.k[.@...Z..bZ..b.....m!.o[....2.....mA.v....m!.o[......Q.-...GQ... N....l...wP..*.e.!..x-..Sy..h...........P\~...ysR...4....
+}.....7.
+...k..Y.$...1o....qmD6..	r\...I..b.4.J......R.6...aG..n.$...pm...\.....GE......5-.~....i fvD....YO.4...h,...XM;.'...B_;./...Rq.9...lkG....v..N..!.....Rq.+..C.Z.....h.8.tP...+.Y-..s.Zq.@+..h..N.VN..!.....Rq..D+..h.!..8D.S.p:(.Y..........8D........Nq...8d.W..j..Ga:.WFy.:.(.......m.l.^....W..mz.%k.^...L.L.[.W..-.+ k...R...U..-.+.....J...m.^U).L...#..Z...U......82..R..^U).!b.L...#..Z...U......82..R..^U).L....:Y.L.j.G.W..#.+.....JqdzU.82..R..^Y.G.W..#..Z....]qdzU.82..R..^U).L...#..Z...U.........+......N..\=....Goz..o......S...j.......nr~j2.S.`e.Z.....**...[.zT<)..j..euSv.P.....Y...{'Y......k....S...,.\,..R.i.d.L....=..........z.//x.|d......._%..........yvB......oP...{.g../..................:?.?..[..7.e.i.V...x{....z.........O2.....5..u.U............xPm.~...b.x.U..h....l..O.k...zL.......u...B......z........-.V......2^.W..^T..CU.6T	f(o.....k..8.~R5..O....y...T\.'
+...e/U._.8/.Nd.p..5(e):0........H....?..9~4..p4.p....!....._5..D.A.(0..F.n..6
+..Q`D..F.(.2...+.........#bG.~...>..?...u....1.;..s...w......c......?....	.v.......{..&H.M..69....\...&......5~.3\G3M.f...i.Bf..B.;.t...]...ar.;.R8kju...Y..t..t..X.g...@.Z.......l.LS..]5..jF.....U..LW.v....9.../d.....&=...@....9......G}4{...	T...........4;..G.....>Z.H...2...7...
+M....0..	,..N-v9.......:)[u..r.....:bZ~.;0;..,...R.*....1Y.......P...4.?|N..bi".1..1.. .R}....C..........yw..^.l....].i].t.L.BOq:..(..TV..
+..R..0.d..A...|..K..^.j..O.)..t./|...nP.a.z../...~.}.....=.....u..B......_....$D.....
+	...uM...w.\...[ ...Q....=].T...{.B..i......1L.y.l...=E5p.b..Y..........c9..+.........}.,..7V....O]U..o.].:*...+....r.>.T}.y......i.a.{&.mp.O..<	...UM..._tM,.wp..T=..;.K....?..PK..........!.[m..............word/webSettings.xml...J.1.....;,.....Y.-.T...>@....L&......k.H/..I2.3...;..
+X....... yZ..j...|pm*).-].........l.7=,....).*I...Y...k.....)C....]..W...n...fW.".P.v\.Wf..)
+u].pK~.....2D.).:d...S..x..<..>..=t!.......3	ue...'.Q.>.w'........@.....[D.@'..3S..r	.>`N|......v1R..p.......PK........3kPVi.
+.....K.......word/theme/theme1.xml.Y]..6..+V.K>..	..~.......K7q.s.8..sN..&..4i..v1...b....n..9...$...7m.....	$Z...<....k.v.s.N...P.0M..y...J...4.j3>my.`..!$4E]m..v..9x..(A@.S&...t.......@tAv&.AN...3.Mt:........2LKO N.........oJ..rQ.#=...P&..[.S..a..}pP..V.GD.I9+......Q.!...Y.cs6 98....qBz|.N...d\tt5C~4..?..X.7.+...,.%#<.$1.&+.1.<.\. ..o.G^.][....b....t\....
+jQTX.;f{.P...=...-.N..E......
+.:A..Eg..3.....$jQt......Fu.D.....p..y....L).....kt.K...WV..@...].o.|,.2.....y..0..^.).C.2....`J.h6,....6..w.wx..
+.l..v[!	. ...j.
+.Z...../.>............{?.h.`.Ui........?......
+.V%.......E..W...z...G...........N.... ...cp.&...C.I......*..F... ..#...W..@..........D^.........*..8.!.(%}..'vY.W..,....gU.
+.....6B=.eb.c..A.jR...}...qP..C.T.[.....<m.-.....s.'\......9l.}.C{7A....CtT..m...("5o^.3...j..*.
+..R..<.j.g\.=B..Q..S........P$2.
+.#....9>TB.@J..!=..0...q.W...C.b!.N.Z...................G.z..=.\.G....9.B.0.o$.......{..I..7...|...z.mf.F.fn..<..Fj..Yz....}f....g....7...)\.^......?....9AW.L.L.^.X4..$..3.X.....Q.e.....y...L.c.!"V....(.'..h\.?.d......z............_4...S.j.Y.XUC.~.....:.*...?.!...!.J.g.T.^	..k.q.
+......@.."`..e.w..F...n......yMGu..uT.e.C.........$Zj%...D].N.$......mG...u...M.b.	....@...{./....M.3>.,^.dW...s......k. .Z.i.,.6...&......F.)
+xC..*.J+.....*t&t...1..Y~.
+o9...b.._.4.ye..].....Y{I....d1,..Z._.ey..2.)usZ.z9.I4....j.F&m:[.S.!...{@EW.A..N..........y^..v...se......e.x|....\.z..*k[....m....z;#..o.N.k#!i.+S.l^&...f9.jw..g.,g.2<g.......^..s..9rLc...
+........[.2..OG..~.....Zc........[.......o
+.Ag8..............vG^.5......|.oul.....7.{.\...2...X....PK........y..X(*..3...........word/document.xml ...(..........................n.0.._.qO.4I#...vU..R.>.c.X...vB....}.}.....V.B........0......QV...+@m.x...W.2..M.w.l...Q..
+...'n....:...%W.@..i..&,..)!..\R;......9.I .......$...M.`.Z..L.......4.\.b.FR..)...c.gH......;!;Z.....J;..,.....n.=.%q[....MDbx..@.R.!.ki.X...wI.d... ^.v./..8..K.g...Z...........%.>...H*......../........p^
+..@...........Vw....mb.K..P...&(^v..=I~.........z.8. ./.....u..>%d3...HIt...RGKj..H.n....*,6...~..o!As.A[=?............G.......Z'.......l..?:?}.=..*_S..Z...i........8I.x}.).(^..;iw.....`?....#..
+....9...G.%.....>i.....b.......8m5e..D........P.M8.B.V.2.r"}u.p.>..PK........y..X|.......A......._rels/.rels..Kj.1...b..h.B)%N6.dWJ. l..i..V.=[.=R.P..ZC_d)...'.............4..............X....'..2.TT]	E.$.n....S.b.P'C....y.D..F.E._c.....v...C....o.9x..
+..,.,.Y.u?...jGyd.`......RW...VC..+Px...G.g!KBhb........r....M|..b.h?....]....z.PK........y..X.}.=....&.......word/_rels/document.xml.rels..=n.0..."p.e.?(.(Y.dM}.E.l#.$.L...C..+Tp..B3t.............8.3F..SP.%.t.7.k....<.v....9mP........9<II..QS...4.>........u.rU..2.3 ...%.......goN#:..,_......@.:..
+ff..A...q............Z../..	&..WK.s....I~.U.q.$...k}.f ?VFq7Q...7_PK..........y..XRZ>.L.........................[Content_Types].xmlPK............IJ...w}...v.................}...docProps/app.xmlPK..........y..XK...A.../.................(...docProps/core.xmlPK..........y..X.Vu~6....	....................word/fontTable.xmlPK..........y..X.Q:Z..........................word/settings.xmlPK..........y..X..|...........................word/styles.xmlPK............!.[m........................(...word/webSettings.xmlPK..........3kPVi.
+.....K.................]...word/theme/theme1.xmlPK..........y..X(*..3......................!..word/document.xmlPK..........y..X|.......A..................$.._rels/.relsPK..........y..X.}.=....&..................%..word/_rels/document.xml.relsPK...............&....
+PROPFIND /._Document.docx HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:35 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /._Microsoft%20Copilot%20Chat%20Files HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:35 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /._videos2 HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:35 GMT
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+
+Not Found
+PROPFIND /Attachments/ HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 1
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 207 Multi-Status
+Accept-Ranges: bytes
+Content-Type: text/xml; charset=utf-8
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:35 GMT
+Content-Length: 507
+
+<?xml version="1.0" encoding="UTF-8"?><D:multistatus xmlns:D="DAV:"><D:response><D:href>/Attachments/</D:href><D:propstat><D:prop><D:getlastmodified>Thu, 26 Dec 2024 00:01:11 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response></D:multistatus>
+PROPFIND /Attachments/ HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>
+
+HTTP/1.1 207 Multi-Status
+Accept-Ranges: bytes
+Content-Type: text/xml; charset=utf-8
+Server: rclone/v1.66.0
+Date: Fri, 04 Jul 2025 02:03:35 GMT
+Content-Length: 507
+
+<?xml version="1.0" encoding="UTF-8"?><D:multistatus xmlns:D="DAV:"><D:response><D:href>/Attachments/</D:href><D:propstat><D:prop><D:getlastmodified>Thu, 26 Dec 2024 00:01:11 GMT</D:getlastmodified><D:resourcetype><D:collection xmlns:D="DAV:"/></D:resourcetype></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat><D:propstat><D:prop><D:getcontentlength></D:getcontentlength><D:creationdate></D:creationdate></D:prop><D:status>HTTP/1.1 404 Not Found</D:status></D:propstat></D:response></D:multistatus>

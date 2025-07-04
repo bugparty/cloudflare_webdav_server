@@ -5,7 +5,7 @@ export interface Env {
 	WEBDAV_PASSWORD?: string;
 }
 
-interface ObjectMetadata {
+export interface ObjectMetadata {
 	size: number;
 	httpMetadata: {
 		updated: Date;

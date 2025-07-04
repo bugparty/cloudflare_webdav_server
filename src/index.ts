@@ -1,146 +1,19 @@
 import { WebDAVDelegate, Env, ObjectMetadata} from './types';
 import { logWriteOperation, logHttpInteraction, handleDebugRoutes } from './logger';
-
-// macOS WebDAV客户端兼容性处理 (基于rclone的实现)
-const macOSSessionCache = new Map<string, number>();
-const SESSION_TIMEOUT = 300000; // 5分钟
-
-// 检测是否是macOS WebDAV客户端
-function isMacOSWebDAVClient(userAgent: string): boolean {
-	return /WebDAVFS|Darwin.*WebDAV|WebDAVLib/i.test(userAgent || '');
-}
-
-// 获取macOS会话标识
-function getMacOSSessionKey(request: Request): string {
-	const ip = request.headers.get('cf-connecting-ip') ||
-	          request.headers.get('x-forwarded-for') ||
-	          'unknown';
-	const userAgent = (request.headers.get('user-agent') || '').slice(0, 50);
-	return `${ip}:${userAgent}`;
-}
-
-// 检查macOS会话缓存
-function checkMacOSSession(sessionKey: string): boolean {
-	const sessionTime = macOSSessionCache.get(sessionKey);
-	const now = Date.now();
-
-	// 清理过期的会话
-	for (const [key, time] of macOSSessionCache.entries()) {
-		if (now - time > SESSION_TIMEOUT) {
-			macOSSessionCache.delete(key);
-		}
-	}
-
-	if (sessionTime && now - sessionTime < SESSION_TIMEOUT) {
-		return true;
-	}
-	return false;
-}
-
-// 设置macOS会话
-function setMacOSSession(sessionKey: string): void {
-	macOSSessionCache.set(sessionKey, Date.now());
-}
-
-// Basic Auth验证函数 (安全的macOS兼容性处理)
-function authenticateRequest(request: Request, env: Env): boolean {
-	// 如果环境变量中没有设置用户名和密码，则允许所有请求（向后兼容）
-	if (!env.WEBDAV_USERNAME || !env.WEBDAV_PASSWORD) {
-		return true;
-	}
-
-	const userAgent = request.headers.get('user-agent') || '';
-	const isMacOS = isMacOSWebDAVClient(userAgent);
-	const sessionKey = getMacOSSessionKey(request);
-
-	console.log('Request method:', request.method, 'URL:', new URL(request.url).pathname);
-	console.log('User-Agent:', userAgent);
-	console.log('Is macOS client:', isMacOS);
-
-	// macOS兼容性：检查会话缓存 - 只有成功认证过的才能使用缓存
-	if (isMacOS && checkMacOSSession(sessionKey)) {
-		console.log('macOS session cache hit, allowing request');
-		return true;
-	}
-
-	const authHeader = request.headers.get('Authorization');
-	console.log('Authorization header:', authHeader);
-
-	if (!authHeader || !authHeader.startsWith('Basic ')) {
-		console.log('Missing or invalid Authorization header');
-		return false;
-	}
-
-	const base64Credentials = authHeader.slice(6);
-	let credentials: string;
-
-	try {
-		credentials = atob(base64Credentials);
-		console.log('Decoded credentials:', credentials);
-	} catch (e) {
-		console.log('Failed to decode base64 credentials:', e);
-		return false;
-	}
-
-	const [username, password] = credentials.split(':');
-
-	// 检查是否是macOS发送的无效默认凭据
-	if (credentials.startsWith('No user accoun')) {
-		console.log('Detected macOS invalid default credentials, rejecting');
-		return false;
-	}
-
-	const isValid = username === env.WEBDAV_USERNAME && password === env.WEBDAV_PASSWORD;
-	console.log('Auth result:', isValid ? 'SUCCESS' : 'FAILED',
-		'- Expected:', env.WEBDAV_USERNAME, '- Got:', username);
-
-	// 如果认证成功且是macOS客户端，缓存会话
-	if (isValid && isMacOS) {
-		setMacOSSession(sessionKey);
-		console.log('Cached macOS session for:', sessionKey);
-	}
-
-	return isValid;
-}
-
-// 返回401未授权响应
-function unauthorizedResponse(): Response {
-	return new Response('Unauthorized', {
-		status: 401,
-		headers: {
-			'WWW-Authenticate': 'Basic realm="WebDAV Server"',
-			'Content-Type': 'text/plain',
-			'DAV': '1,2',
-			'Allow': 'OPTIONS, GET, HEAD, PUT, DELETE, PROPFIND, MKCOL, MOVE, COPY'
-		}
-	});
-}
-
-// 为macOS客户端添加兼容性响应头 (参考rclone实现)
-function addMacOSCompatibilityHeaders(headers: Headers): void {
-	headers.set('Ms-Author-Via', 'DAV');
-	headers.set('DAV', '1, 2');
-	headers.set('Server', 'WebDAV Server/1.0');
-}
-
-// 创建兼容macOS的响应
-function createResponse(body: BodyInit | null, init: ResponseInit, request: Request): Response {
-	const response = new Response(body, init);
-	const userAgent = request.headers.get('user-agent') || '';
-
-	if (isMacOSWebDAVClient(userAgent)) {
-		addMacOSCompatibilityHeaders(response.headers);
-	}
-
-	return response;
-}
-
+import {
+	isMacOSWebDAVClient,
+	authenticateRequest,
+	unauthorizedResponse,
+	createResponse,
+	handleMacOSOptionsRequest
+} from './macos';
 // 主要的请求处理函数
 async function handleWebDAVRequest(request: Request, env: Env): Promise<Response> {
 	const userAgent = request.headers.get('user-agent') || '';
 	const isMacOS = isMacOSWebDAVClient(userAgent);
 	let davDelegate = new WebDAVDelegateImpl();
 	davDelegate.init(env);
+
 	// 处理调试路由
 	const debugResponse = handleDebugRoutes(request);
 	if (debugResponse) {
@@ -148,29 +21,18 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 	}
 
 	// macOS兼容性：对于OPTIONS请求，先处理再进行认证
-	if (request.method === 'OPTIONS' && isMacOS) {
-		const response = new Response(null, {
-			status: 200,
-			headers: {
-				'Allow': 'OPTIONS, GET, HEAD, PUT, DELETE, PROPFIND, MKCOL, MOVE, COPY',
-				'DAV': '1,2,3'
-			}
-		});
-		addMacOSCompatibilityHeaders(response.headers);
-		return response;
+	const optionsResponse = handleMacOSOptionsRequest(request);
+	if (optionsResponse) {
+		return optionsResponse;
 	}
+
 	if (request.method === "PROPFIND") {
 		return await davDelegate.onPropfind(request);
 	}
 
 	// 验证身份 - 现在严格要求认证
 	if (!authenticateRequest(request, env)) {
-		const response = unauthorizedResponse();
-		// 为macOS客户端添加兼容性头部
-		if (isMacOS) {
-			addMacOSCompatibilityHeaders(response.headers);
-		}
-		return response;
+		return unauthorizedResponse(request);
 	}
 
 	const url = new URL(request.url);
@@ -456,8 +318,6 @@ class WebDAVDelegateImpl implements WebDAVDelegate {
 		const url = new URL(request.url);
 		// 去掉前缀 route，不同部署时可能要 trim
 		let path = url.pathname.replace(/^\/?/, '');
-		const userAgent = request.headers.get('user-agent') || '';
-		const isMacOS = isMacOSWebDAVClient(userAgent);
 		const depth = request.headers.get('Depth') || '1';
 		const list = await this.env.BUCKET.list({ prefix: path, delimiter: '/' });
 		const xml = await buildPropfindResponse(path, new URL(request.url), this.env, list);

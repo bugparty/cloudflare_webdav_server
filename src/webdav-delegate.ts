@@ -89,7 +89,7 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 			const successInfo = writeLogInfo + '\n- Result: SUCCESS - File written to R2';
 			const response = createResponse(null, { status: 201 }, request);
 			// 记录成功的写入操作
-			logHttpInteraction(request, response, successInfo);
+                        await logHttpInteraction(request, response, successInfo);
 			return response;
 		} catch (error) {
 			writeOperationDetails.result = 'FAILED';
@@ -100,7 +100,7 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 			console.error('PUT operation failed:', error);
 			const response = createResponse('Internal Server Error', { status: 500 }, request);
 			// 记录失败的写入操作
-			logHttpInteraction(request, response, errorInfo);
+                        await logHttpInteraction(request, response, errorInfo);
 			return response;
 		}
 	}
@@ -141,7 +141,7 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 			console.log('DELETE operation:', successInfo);
 			const response = createResponse(null, { status: 204 }, request);
 			// 记录成功的删除操作
-			logHttpInteraction(request, response, successInfo);
+                        await logHttpInteraction(request, response, successInfo);
 			return response;
 		} catch (error) {
 			deleteOperationDetails.result = 'FAILED';
@@ -152,7 +152,7 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 			console.error('DELETE operation failed:', error);
 			const response = createResponse('Internal Server Error', { status: 500 }, request);
 			// 记录失败的删除操作
-			logHttpInteraction(request, response, errorInfo);
+                        await logHttpInteraction(request, response, errorInfo);
 			return response;
 		}
 	}
@@ -187,7 +187,7 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 			console.log('MKCOL operation:', successInfo);
 			const response = createResponse(null, { status: 201 }, request);
 			// 记录成功的目录创建操作
-			logHttpInteraction(request, response, successInfo);
+                        await logHttpInteraction(request, response, successInfo);
 			return response;
 		} catch (error) {
 			mkcolOperationDetails.result = 'FAILED';
@@ -198,7 +198,7 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 			console.error('MKCOL operation failed:', error);
 			const response = createResponse('Internal Server Error', { status: 500 }, request);
 			// 记录失败的目录创建操作
-			logHttpInteraction(request, response, errorInfo);
+                        await logHttpInteraction(request, response, errorInfo);
 			return response;
 		}
 	}

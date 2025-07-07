@@ -83,7 +83,7 @@ function formatHttpResponse(response: Response): string {
 }
 
 // 记录HTTP交互到缓冲区
-export function logHttpInteraction(request: Request, response: Response, additionalInfo?: string): void {
+export async function logHttpInteraction(request: Request, response: Response, additionalInfo?: string): Promise<void> {
 	const timestamp = new Date().toISOString();
 	const url = new URL(request.url);
 	const logEntry = `=== ${timestamp} ===\n` +
@@ -91,7 +91,17 @@ export function logHttpInteraction(request: Request, response: Response, additio
 		formatHttpResponse(response) +
 		'---\n\n';
 
-	httpLogBuffer.push(logEntry);
+        httpLogBuffer.push(logEntry);
+
+        // 如果在本地调试环境并设置了日志文件路径，额外写入文件
+        if (typeof process !== 'undefined' && process.env.DEBUG_HTTP_LOG_FILE) {
+                try {
+                        const { appendFile } = await import('node:fs/promises');
+                        await appendFile(process.env.DEBUG_HTTP_LOG_FILE, logEntry);
+                } catch (e) {
+                        console.warn('Failed to write http log to file:', e);
+                }
+        }
 
 	// 保持缓冲区大小
 	if (httpLogBuffer.length > MAX_LOG_ENTRIES) {

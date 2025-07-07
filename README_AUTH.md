@@ -31,6 +31,17 @@ wrangler secret put WEBDAV_PASSWORD
 
 如果没有设置 `WEBDAV_USERNAME` 和 `WEBDAV_PASSWORD` 环境变量，服务器将允许所有请求通过（向后兼容模式）。
 
+## 本地调试日志
+
+在本地使用 `wrangler dev` 调试时，可通过设置 `DEBUG_HTTP_LOG_FILE` 环境变量
+将每次 HTTP 请求和响应记录到指定文件。例如：
+
+```bash
+DEBUG_HTTP_LOG_FILE=./http.log npm run dev
+```
+
+日志依旧会保存在内存中，可访问 `/_debug/http-log` 查看实时内容。
+
 ## 使用方法
 
 配置完成后，客户端需要使用Basic Auth进行连接：

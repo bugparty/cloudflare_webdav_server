@@ -80,21 +80,44 @@ describe('WebDAV worker', () => {
 		expect(response.headers.get('WWW-Authenticate')).toBe('Basic realm=""');
 	});
 
-	it('handles malformed authorization header gracefully', async () => {
-		const request = new Request('http://example.com', {
-			method: 'GET',
-			headers: {
-				'Authorization': 'Basic invalid-base64!@#'
-			}
-		});
-		const ctx = createExecutionContext();
-		const testEnv: Env = {
-			...env,
-			WEBDAV_USERNAME: 'testuser',
-			WEBDAV_PASSWORD: 'testpass'
-		};
-		const response = await testWorker.fetch(request as any, testEnv, ctx);
-		await waitOnExecutionContext(ctx);
-		expect(response.status).toBe(401);
-	});
+        it('handles malformed authorization header gracefully', async () => {
+                const request = new Request('http://example.com', {
+                        method: 'GET',
+                        headers: {
+                                'Authorization': 'Basic invalid-base64!@#'
+                        }
+                });
+                const ctx = createExecutionContext();
+                const testEnv: Env = {
+                        ...env,
+                        WEBDAV_USERNAME: 'testuser',
+                        WEBDAV_PASSWORD: 'testpass'
+                };
+                const response = await testWorker.fetch(request as any, testEnv, ctx);
+                await waitOnExecutionContext(ctx);
+                expect(response.status).toBe(401);
+        });
+
+        it('returns 404 for PROPFIND on missing resource', async () => {
+                const credentials = btoa('testuser:testpass');
+                const body = '<?xml version="1.0" encoding="utf-8"?><D:propfind xmlns:D="DAV:"><D:prop></D:prop></D:propfind>';
+                const request = new Request('http://example.com/no-file.txt', {
+                        method: 'PROPFIND',
+                        headers: {
+                                'Authorization': `Basic ${credentials}`,
+                                'Depth': '0',
+                                'Content-Type': 'text/xml'
+                        },
+                        body
+                });
+                const ctx = createExecutionContext();
+                const testEnv: Env = {
+                        ...env,
+                        WEBDAV_USERNAME: 'testuser',
+                        WEBDAV_PASSWORD: 'testpass'
+                };
+                const response = await testWorker.fetch(request as any, testEnv, ctx);
+                await waitOnExecutionContext(ctx);
+                expect(response.status).toBe(404);
+        });
 });

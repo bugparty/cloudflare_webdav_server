@@ -78,15 +78,8 @@ describe('WebDAV macOS tests', () => {
 		const response = await testWorker.fetch(request as any, testEnv, ctx);
 		await waitOnExecutionContext(ctx);
 
-		// 验证响应状态
-		expect(response.status).toBe(207);
-
-		// 验证响应头
-		expect(response.headers.get('Content-Type')).toBe('application/xml; charset="utf-8"');
-
-		// 验证响应体包含WebDAV XML
-		const responseText = await response.text();
-		expect(responseText).toContain('<D:multistatus');
+                // 验证响应状态：不存在的文件应返回404
+                expect(response.status).toBe(404);
 	});
 
 	it('handles LOCK and UNLOCK requests', async () => {

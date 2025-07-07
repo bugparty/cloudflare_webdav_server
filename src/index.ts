@@ -1,12 +1,6 @@
-import { WebDAVDelegate, Env, ObjectMetadata} from './types';
+import { WebDAVDelegate, Env, ObjectMetadata } from './types';
 import { logWriteOperation, logHttpInteraction, handleDebugRoutes } from './logger';
-import {
-	isMacOSWebDAVClient,
-	authenticateRequest,
-	unauthorizedResponse,
-	createResponse,
-	handleMacOSOptionsRequest
-} from './macos';
+import { isMacOSWebDAVClient, authenticateRequest, unauthorizedResponse, createResponse, handleMacOSOptionsRequest } from './macos';
 import { WebDAVDelegateImpl } from './webdav-delegate';
 import { a } from 'vitest/dist/chunks/suite.d.FvehnV49.js';
 // 主要的请求处理函数
@@ -22,7 +16,7 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 		return debugResponse;
 	}
 	// macOS兼容性：对于OPTIONS请求，先处理再进行认证
-	if (isMacOS && (request.method === 'OPTIONS') ) {
+	if (isMacOS && request.method === 'OPTIONS') {
 		const optionsResponse = handleMacOSOptionsRequest(request, davDelegate);
 		if (optionsResponse) {
 			return optionsResponse;
@@ -52,6 +46,10 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 			return await davDelegate.onDelete(request);
 		case 'MKCOL':
 			return await davDelegate.onMkcol(request);
+		case 'LOCK':
+			return await davDelegate.onLock(request);
+		case 'UNLOCK':
+			return await davDelegate.onUnlock(request);
 		case 'MOVE':
 		case 'COPY':
 			// 从 Destination 头解析目标路径 - 添加详细日志
@@ -70,14 +68,14 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 				`- Source path: ${path}`,
 				`- Destination path: ${dest}`,
 				`- Operation: ${request.method === 'MOVE' ? 'Move file' : 'Copy file'}`,
-				`- Timestamp: ${new Date().toISOString()}`
+				`- Timestamp: ${new Date().toISOString()}`,
 			];
 
 			const moveOperationDetails: any = {
 				operation: request.method,
 				sourcePath: path,
 				destinationPath: dest,
-				timestamp: new Date().toISOString()
+				timestamp: new Date().toISOString(),
 			};
 
 			try {
@@ -139,7 +137,6 @@ export default {
 		let response: Response;
 		let additionalInfo: string | undefined;
 
-
 		try {
 			response = await handleWebDAVRequest(request, env);
 		} catch (error) {
@@ -160,6 +157,5 @@ export default {
 		}
 
 		return response;
-	}
+	},
 } as ExportedHandler<Env>;
-

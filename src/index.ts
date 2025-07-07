@@ -57,7 +57,7 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 			if (!destination) {
 				const errorInfo = `${request.method} Operation Details:\n- Error: Missing Destination header`;
 				const response = createResponse('Bad Request: Missing Destination header', { status: 400 }, request);
-				logHttpInteraction(request, response, errorInfo);
+                                await logHttpInteraction(request, response, errorInfo);
 				return response;
 			}
 
@@ -88,7 +88,7 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 
 					const notFoundInfo = moveInfo.join('\n') + '\n- Result: FAILED - Source file not found';
 					const response = createResponse('Not Found', { status: 404 }, request);
-					logHttpInteraction(request, response, notFoundInfo);
+                                        await logHttpInteraction(request, response, notFoundInfo);
 					return response;
 				}
 
@@ -113,7 +113,7 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 				console.log(`${request.method} operation:`, successInfo);
 				const response = createResponse(null, { status: 201 }, request);
 				// 记录成功的移动/复制操作
-				logHttpInteraction(request, response, successInfo);
+                                await logHttpInteraction(request, response, successInfo);
 				return response;
 			} catch (error) {
 				moveOperationDetails.result = 'FAILED';
@@ -124,7 +124,7 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 				console.error(`${request.method} operation failed:`, error);
 				const response = createResponse('Internal Server Error', { status: 500 }, request);
 				// 记录失败的移动/复制操作
-				logHttpInteraction(request, response, errorInfo);
+                                await logHttpInteraction(request, response, errorInfo);
 				return response;
 			}
 
@@ -153,7 +153,7 @@ export default {
 		const isModifyOperation = ['PUT', 'DELETE', 'MKCOL', 'MOVE', 'COPY'].includes(method);
 
 		if (!isDebugRoute && !isModifyOperation) {
-			logHttpInteraction(request, response, additionalInfo);
+                        await logHttpInteraction(request, response, additionalInfo);
 		}
 
 		return response;

@@ -229,23 +229,32 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 	async onUnlock(request: Request): Promise<Response> {
 		return new Response(null, { status: 204 });
 	}
-	async onPropfind(request: Request): Promise<Response> {
-		const url = new URL(request.url);
-		// 去掉前缀 route，不同部署时可能要 trim
-		let path = url.pathname.replace(/^\/?/, '');
-		const depth = request.headers.get('Depth') || '1';
-		const list = await this.env.BUCKET.list({ prefix: path, delimiter: '/' });
-		const xml = await buildPropfindResponse(path, new URL(request.url), this.env, list);
+        async onPropfind(request: Request): Promise<Response> {
+                const url = new URL(request.url);
+                // 去掉前缀 route，不同部署时可能要 trim
+                let path = url.pathname.replace(/^\/?/, '');
+                const depth = request.headers.get('Depth') || '1';
+                const list = await this.env.BUCKET.list({ prefix: path, delimiter: '/' });
+                const selfObj = await this.env.BUCKET.get(path);
 
-		return createResponse(
-			xml,
-			{
-				status: 207,
-				headers: { 'Content-Type': 'application/xml; charset="utf-8"' },
-			},
-			request,
-		);
-	}
+                // 当目标对象和其前缀列表都不存在时，返回404
+                const exists = selfObj || (list.objects && list.objects.length > 0) ||
+                        (list.delimitedPrefixes && list.delimitedPrefixes.length > 0);
+                if (!exists) {
+                        return createResponse('Not Found', { status: 404 }, request);
+                }
+
+                const xml = await buildPropfindResponse(path, new URL(request.url), this.env, list);
+
+                return createResponse(
+                        xml,
+                        {
+                                status: 207,
+                                headers: { 'Content-Type': 'application/xml; charset="utf-8"' },
+                        },
+                        request,
+                );
+        }
 	async onOptions(request: Request): Promise<Response> {
 		const response = new Response(null, {
 			status: 200,

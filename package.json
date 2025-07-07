@@ -4,7 +4,8 @@
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
-		"dev": "wrangler dev",
+		"dev": "wrangler dev --port 8080",
+		"debug": "wrangler dev  --inspector-port  9229 --port 8080",
 		"start": "wrangler dev",
 		"test": "vitest"
 	},

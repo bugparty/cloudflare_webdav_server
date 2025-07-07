@@ -992,62 +992,7 @@ Content-Length: 9
 Content-Type: text/plain; charset=utf-8
 
 Not Found
-PROPFIND /.ql_disablecache HTTP/1.1
-Host: localhost:8080
-Content-Type: text/xml
-Depth: 0
-Accept: */*
-User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
-Authorization: Basic YWRtaW46cGFzc3dvcmQ=
-Content-Length: 179
-Connection: keep-alive
 
-<?xml version="1.0" encoding="utf-8"?>
-<D:propfind xmlns:D="DAV:">
-<D:prop>
-<D:getlastmodified/>
-<D:getcontentlength/>
-<D:creationdate/>
-<D:resourcetype/>
-</D:prop>
-</D:propfind>
-
-HTTP/1.1 404 Not Found
-Accept-Ranges: bytes
-Server: rclone/v1.66.0
-Date: Fri, 04 Jul 2025 02:03:33 GMT
-Content-Length: 9
-Content-Type: text/plain; charset=utf-8
-
-Not Found
-PROPFIND /._Attachments HTTP/1.1
-Host: localhost:8080
-Content-Type: text/xml
-Depth: 0
-Accept: */*
-User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
-Authorization: Basic YWRtaW46cGFzc3dvcmQ=
-Content-Length: 179
-Connection: keep-alive
-
-<?xml version="1.0" encoding="utf-8"?>
-<D:propfind xmlns:D="DAV:">
-<D:prop>
-<D:getlastmodified/>
-<D:getcontentlength/>
-<D:creationdate/>
-<D:resourcetype/>
-</D:prop>
-</D:propfind>
-
-HTTP/1.1 404 Not Found
-Accept-Ranges: bytes
-Server: rclone/v1.66.0
-Date: Fri, 04 Jul 2025 02:03:33 GMT
-Content-Length: 9
-Content-Type: text/plain; charset=utf-8
-
-Not Found
 GET /Document.docx HTTP/1.1
 Host: localhost:8080
 Accept: */*
@@ -1154,62 +1099,8 @@ Content-Length: 9
 Content-Type: text/plain; charset=utf-8
 
 Not Found
-PROPFIND /._Microsoft%20Copilot%20Chat%20Files HTTP/1.1
-Host: localhost:8080
-Content-Type: text/xml
-Depth: 0
-Accept: */*
-User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
-Authorization: Basic YWRtaW46cGFzc3dvcmQ=
-Content-Length: 179
-Connection: keep-alive
 
-<?xml version="1.0" encoding="utf-8"?>
-<D:propfind xmlns:D="DAV:">
-<D:prop>
-<D:getlastmodified/>
-<D:getcontentlength/>
-<D:creationdate/>
-<D:resourcetype/>
-</D:prop>
-</D:propfind>
 
-HTTP/1.1 404 Not Found
-Accept-Ranges: bytes
-Server: rclone/v1.66.0
-Date: Fri, 04 Jul 2025 02:03:35 GMT
-Content-Length: 9
-Content-Type: text/plain; charset=utf-8
-
-Not Found
-PROPFIND /._videos2 HTTP/1.1
-Host: localhost:8080
-Content-Type: text/xml
-Depth: 0
-Accept: */*
-User-Agent: WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)
-Authorization: Basic YWRtaW46cGFzc3dvcmQ=
-Content-Length: 179
-Connection: keep-alive
-
-<?xml version="1.0" encoding="utf-8"?>
-<D:propfind xmlns:D="DAV:">
-<D:prop>
-<D:getlastmodified/>
-<D:getcontentlength/>
-<D:creationdate/>
-<D:resourcetype/>
-</D:prop>
-</D:propfind>
-
-HTTP/1.1 404 Not Found
-Accept-Ranges: bytes
-Server: rclone/v1.66.0
-Date: Fri, 04 Jul 2025 02:03:35 GMT
-Content-Length: 9
-Content-Type: text/plain; charset=utf-8
-
-Not Found
 PROPFIND /Attachments/ HTTP/1.1
 Host: localhost:8080
 Content-Type: text/xml

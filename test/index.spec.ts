@@ -1,6 +1,10 @@
 import { env, createExecutionContext, waitOnExecutionContext, SELF } from 'cloudflare:test';
 import { describe, it, expect } from 'vitest';
-import worker, { Env } from '../src/index';
+import worker from '../src/index';
+import type { Env } from '../src/types';
+
+// Type assertion to ensure worker is available
+const testWorker = worker as unknown as { fetch: (request: Request, env: Env, ctx: ExecutionContext) => Promise<Response> };
 
 describe('WebDAV worker', () => {
 	it('responds with 401 for unauthorized request', async () => {
@@ -13,10 +17,10 @@ describe('WebDAV worker', () => {
 			WEBDAV_USERNAME: 'testuser',
 			WEBDAV_PASSWORD: 'testpass'
 		};
-		const response = await worker.fetch(request as any, testEnv, ctx);
+		const response = await testWorker.fetch(request as any, testEnv, ctx);
 		await waitOnExecutionContext(ctx);
 		expect(response.status).toBe(401);
-		expect(response.headers.get('WWW-Authenticate')).toBe('Basic realm="WebDAV Server"');
+		expect(response.headers.get('WWW-Authenticate')).toBe('Basic realm=""');
 	});
 
 	it('responds with OPTIONS for authorized request', async () => {
@@ -33,11 +37,11 @@ describe('WebDAV worker', () => {
 			WEBDAV_USERNAME: 'testuser',
 			WEBDAV_PASSWORD: 'testpass'
 		};
-		const response = await worker.fetch(request as any, testEnv, ctx);
+		const response = await testWorker.fetch(request as any, testEnv, ctx);
 		await waitOnExecutionContext(ctx);
 		expect(response.status).toBe(200);
 		expect(response.headers.get('Allow')).toContain('PROPFIND');
-		expect(response.headers.get('DAV')).toBe('1,2');
+		expect(response.headers.get('DAV')).toBe('1, 2');
 	});
 
 	it('allows access when no auth is configured (backward compatibility)', async () => {
@@ -50,7 +54,7 @@ describe('WebDAV worker', () => {
 			WEBDAV_USERNAME: undefined,
 			WEBDAV_PASSWORD: undefined
 		};
-		const response = await worker.fetch(request as any, testEnv, ctx);
+		const response = await testWorker.fetch(request as any, testEnv, ctx);
 		await waitOnExecutionContext(ctx);
 		expect(response.status).toBe(200);
 	});
@@ -70,10 +74,10 @@ describe('WebDAV worker', () => {
 			WEBDAV_USERNAME: 'testuser',
 			WEBDAV_PASSWORD: 'testpass'
 		};
-		const response = await worker.fetch(request as any, testEnv, ctx);
+		const response = await testWorker.fetch(request as any, testEnv, ctx);
 		await waitOnExecutionContext(ctx);
 		expect(response.status).toBe(401);
-		expect(response.headers.get('WWW-Authenticate')).toBe('Basic realm="WebDAV Server"');
+		expect(response.headers.get('WWW-Authenticate')).toBe('Basic realm=""');
 	});
 
 	it('handles malformed authorization header gracefully', async () => {
@@ -89,7 +93,7 @@ describe('WebDAV worker', () => {
 			WEBDAV_USERNAME: 'testuser',
 			WEBDAV_PASSWORD: 'testpass'
 		};
-		const response = await worker.fetch(request as any, testEnv, ctx);
+		const response = await testWorker.fetch(request as any, testEnv, ctx);
 		await waitOnExecutionContext(ctx);
 		expect(response.status).toBe(401);
 	});

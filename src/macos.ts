@@ -1,5 +1,4 @@
-import { Env } from './types';
-
+import { Env,WebDAVDelegate } from './types';
 // macOS WebDAV客户端兼容性处理 (基于rclone的实现)
 const macOSSessionCache = new Map<string, number>();
 const SESSION_TIMEOUT = 300000; // 5分钟
@@ -45,7 +44,8 @@ export function setMacOSSession(sessionKey: string): void {
 export function addMacOSCompatibilityHeaders(headers: Headers): void {
 	headers.set('Ms-Author-Via', 'DAV');
 	headers.set('DAV', '1, 2');
-	headers.set('Server', 'WebDAV Server/1.0');
+	headers.set('Server', 'rclone/v1.66.0');
+	headers.set('Accept-Ranges', 'bytes');
 }
 
 // 创建兼容macOS的响应
@@ -64,13 +64,13 @@ export function createResponse(body: BodyInit | null, init: ResponseInit, reques
 export function unauthorizedResponse(request: Request): Response {
 	const now = new Date();
 	const formattedNow = now.toISOString();
-	const response = new Response('Unauthorized', {
+	const response = new Response('401 Unauthorized', {
 		status: 401,
 		headers: {
-			'WWW-Authenticate': `Basic realm="WebDAV Server ${formattedNow}"`,
+			'WWW-Authenticate': `Basic realm=""`,
 			'Content-Type': 'text/plain',
 			'DAV': '1,2',
-			'Allow': 'OPTIONS, GET, HEAD, PUT, DELETE, PROPFIND, MKCOL, MOVE, COPY'
+			'Allow': 'OPTIONS, LOCK, DELETE, PROPPATCH, COPY, MOVE, UNLOCK, PROPFIND'
 		}
 	});
 
@@ -94,14 +94,8 @@ export function authenticateRequest(request: Request, env: Env): boolean {
 	const sessionKey = getMacOSSessionKey(request);
 
 	console.log('Request method:', request.method, 'URL:', new URL(request.url).pathname);
-	console.log('User-Agent:', userAgent);
-	console.log('Is macOS client:', isMacOS);
-
-	// macOS兼容性：检查会话缓存 - 只有成功认证过的才能使用缓存
-	if (isMacOS && checkMacOSSession(sessionKey)) {
-		console.log('macOS session cache hit, allowing request');
-		return true;
-	}
+	//console.log('User-Agent:', userAgent);
+	//console.log('Is macOS client:', isMacOS);
 
 	const authHeader = request.headers.get('Authorization');
 	console.log('Authorization header:', authHeader);
@@ -115,14 +109,15 @@ export function authenticateRequest(request: Request, env: Env): boolean {
 	let credentials: string;
 
 	try {
+		//console.log('Base64 credentials:', base64Credentials);
 		credentials = atob(base64Credentials);
-		console.log('Decoded credentials:', credentials);
+		//console.log('Decoded credentials:', credentials);
 	} catch (e) {
 		console.log('Failed to decode base64 credentials:', e);
 		return false;
 	}
 
-	const [username, password] = credentials.split(':');
+	let [username, password] = credentials.split(':');
 
 	// 检查是否是macOS发送的无效默认凭据
 	if (credentials.startsWith('No user accoun')) {
@@ -130,30 +125,32 @@ export function authenticateRequest(request: Request, env: Env): boolean {
 		return false;
 	}
 
-	const isValid = username === env.WEBDAV_USERNAME && password === env.WEBDAV_PASSWORD;
-	console.log('Auth result:', isValid ? 'SUCCESS' : 'FAILED',
-		'- Expected:', env.WEBDAV_USERNAME, '- Got:', username);
-
-	// 如果认证成功且是macOS客户端，缓存会话
-	if (isValid && isMacOS) {
-		setMacOSSession(sessionKey);
-		console.log('Cached macOS session for:', sessionKey);
+	if (typeof username === 'undefined' || typeof password === 'undefined') {
+		console.log('Invalid credentials format');
+		return false;
 	}
+	//console.log('Parsed credentials - Username:', username, 'Password:', password);
+	//console.log('Expected - Username:', env.WEBDAV_USERNAME, 'Password:', env.WEBDAV_PASSWORD);
+	username = username.trim();
+	password = password.trim();
+
+	const isValid = username === env.WEBDAV_USERNAME && password === env.WEBDAV_PASSWORD;
+	//console.log('Auth result:', isValid ? 'SUCCESS' : 'FAILED','- Expected:', env.WEBDAV_USERNAME, '- Got:', username);
 
 	return isValid;
 }
 
 // 处理macOS OPTIONS请求
-export function handleMacOSOptionsRequest(request: Request): Response | null {
-	const userAgent = request.headers.get('user-agent') || '';
-	const isMacOS = isMacOSWebDAVClient(userAgent);
+export async function handleMacOSOptionsRequest(request: Request, davDelegate: WebDAVDelegate): Response | null {
 
-	if (request.method === 'OPTIONS' && isMacOS) {
+
+	if (request.method === 'OPTIONS' ) {
 		const response = new Response(null, {
 			status: 200,
 			headers: {
-				'Allow': 'OPTIONS, GET, HEAD, PUT, DELETE, PROPFIND, MKCOL, MOVE, COPY',
-				'DAV': '1,2,3'
+				'Allow': 'OPTIONS, LOCK, DELETE, PROPPATCH, COPY, MOVE, UNLOCK, PROPFIND',
+				'DAV': '1,2',
+				'Content-Length': '0',
 			}
 		});
 		addMacOSCompatibilityHeaders(response.headers);

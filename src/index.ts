@@ -8,6 +8,7 @@ import {
 	handleMacOSOptionsRequest
 } from './macos';
 import { WebDAVDelegateImpl } from './webdav-delegate';
+import { a } from 'vitest/dist/chunks/suite.d.FvehnV49.js';
 // 主要的请求处理函数
 async function handleWebDAVRequest(request: Request, env: Env): Promise<Response> {
 	const userAgent = request.headers.get('user-agent') || '';
@@ -21,9 +22,11 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 		return debugResponse;
 	}
 	// macOS兼容性：对于OPTIONS请求，先处理再进行认证
-	const optionsResponse = handleMacOSOptionsRequest(request);
-	if (optionsResponse) {
-		return optionsResponse;
+	if (isMacOS && (request.method === 'OPTIONS') ) {
+		const optionsResponse = handleMacOSOptionsRequest(request, davDelegate);
+		if (optionsResponse) {
+			return optionsResponse;
+		}
 	}
 
 	// 验证身份 - 现在严格要求认证
@@ -36,190 +39,19 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 	let path = url.pathname.replace(/^\/?/, '');
 
 	switch (request.method) {
-		case 'OPTIONS':
-			return createResponse(null, {
-				status: 200,
-				headers: {
-					'Allow': 'OPTIONS, GET, HEAD, PUT, DELETE, PROPFIND, MKCOL, MOVE, COPY',
-					'DAV': '1,2'
-				}
-			}, request);
 		case 'GET':
 		case 'HEAD':
-			// GET/HEAD 下载或获取元信息
-			const obj = await env.BUCKET.get(path);
-			if (!obj) return createResponse('Not Found', { status: 404 }, request);
-			return createResponse(request.method === 'HEAD' ? null : obj.body, {
-				status: 200,
-				headers: {
-					'Content-Type': obj.httpMetadata?.contentType || 'application/octet-stream',
-					'Content-Length': obj.size.toString(),
-					'Last-Modified': obj.uploaded.toUTCString()
-				}
-			}, request);		case 'PUT':
-			// 上传／覆盖 - 添加详细的写入日志
-			const body = await request.arrayBuffer();
-			const contentType = request.headers.get('Content-Type') || 'application/octet-stream';
-			const contentLength = body.byteLength;
-
-			// 准备写入日志信息
-			const writeInfo = [
-				`PUT Operation Details:`,
-				`- Target path: ${path}`,
-				`- Content-Type: ${contentType}`,
-				`- Content-Length: ${contentLength} bytes`,
-				`- Body size: ${contentLength} bytes`,
-				`- Timestamp: ${new Date().toISOString()}`
-			];
-
-			// 对于小文件，记录更多信息
-			let contentPreview = '';
-			if (contentLength < 1024) {
-				try {
-					const textContent = new TextDecoder().decode(body.slice(0, 200));
-					contentPreview = textContent.substring(0, 100) + (textContent.length > 100 ? '...' : '');
-					writeInfo.push(`- Content preview: "${contentPreview}"`);
-				} catch {
-					writeInfo.push(`- Content: [Binary data, ${contentLength} bytes]`);
-				}
-			} else {
-				writeInfo.push(`- Content: [Large file, ${contentLength} bytes]`);
-			}
-
-			const writeLogInfo = writeInfo.join('\n');
-			console.log('PUT operation:', writeLogInfo);
-
-			// 记录到写入操作日志
-			const writeOperationDetails: any = {
-				operation: 'PUT',
-				path: path,
-				contentType: contentType,
-				contentLength: contentLength,
-				contentPreview: contentPreview,
-				timestamp: new Date().toISOString()
-			};
-
-			try {
-				await env.BUCKET.put(path, body, {
-					httpMetadata: { contentType }
-				});
-
-				writeOperationDetails.result = 'SUCCESS';
-				writeOperationDetails.message = 'File written to R2';
-				logWriteOperation('PUT', path, writeOperationDetails);
-
-				const successInfo = writeLogInfo + '\n- Result: SUCCESS - File written to R2';
-				const response = createResponse(null, { status: 201 }, request);
-				// 记录成功的写入操作
-				logHttpInteraction(request, response, successInfo);
-				return response;
-			} catch (error) {
-				writeOperationDetails.result = 'FAILED';
-				writeOperationDetails.error = String(error);
-				logWriteOperation('PUT', path, writeOperationDetails);
-
-				const errorInfo = writeLogInfo + `\n- Result: FAILED - ${error}`;
-				console.error('PUT operation failed:', error);
-				const response = createResponse('Internal Server Error', { status: 500 }, request);
-				// 记录失败的写入操作
-				logHttpInteraction(request, response, errorInfo);
-				return response;
-			}		case 'DELETE':
-			// 删除 - 添加详细的删除日志
-			const deleteInfo = [
-				`DELETE Operation Details:`,
-				`- Target path: ${path}`,
-				`- Timestamp: ${new Date().toISOString()}`
-			];
-
-			const deleteOperationDetails: any = {
-				operation: 'DELETE',
-				path: path,
-				timestamp: new Date().toISOString()
-			};
-
-			try {
-				// 先检查文件是否存在
-				const existingObj = await env.BUCKET.get(path);
-				if (existingObj) {
-					deleteInfo.push(`- File exists: YES (${existingObj.size} bytes)`);
-					deleteInfo.push(`- Content-Type: ${existingObj.httpMetadata?.contentType || 'unknown'}`);
-					deleteOperationDetails.fileExists = true;
-					deleteOperationDetails.fileSize = existingObj.size;
-					deleteOperationDetails.contentType = existingObj.httpMetadata?.contentType || 'unknown';
-				} else {
-					deleteInfo.push(`- File exists: NO`);
-					deleteOperationDetails.fileExists = false;
-				}
-
-				await env.BUCKET.delete(path);
-
-				deleteOperationDetails.result = 'SUCCESS';
-				deleteOperationDetails.message = 'File deleted from R2';
-				logWriteOperation('DELETE', path, deleteOperationDetails);
-
-				const successInfo = deleteInfo.join('\n') + '\n- Result: SUCCESS - File deleted from R2';
-				console.log('DELETE operation:', successInfo);
-				const response = createResponse(null, { status: 204 }, request);
-				// 记录成功的删除操作
-				logHttpInteraction(request, response, successInfo);
-				return response;
-			} catch (error) {
-				deleteOperationDetails.result = 'FAILED';
-				deleteOperationDetails.error = String(error);
-				logWriteOperation('DELETE', path, deleteOperationDetails);
-
-				const errorInfo = deleteInfo.join('\n') + `\n- Result: FAILED - ${error}`;
-				console.error('DELETE operation failed:', error);
-				const response = createResponse('Internal Server Error', { status: 500 }, request);
-				// 记录失败的删除操作
-				logHttpInteraction(request, response, errorInfo);
-				return response;
-			}		case 'MKCOL':
-			// 创建"目录"：上传一个空对象，比如 key="foo/bar/" - 添加详细日志
-			if (!path.endsWith('/')) path += '/';
-
-			const mkcolInfo = [
-				`MKCOL Operation Details:`,
-				`- Target path: ${path}`,
-				`- Operation: Create directory`,
-				`- Timestamp: ${new Date().toISOString()}`
-			];
-
-			const mkcolOperationDetails: any = {
-				operation: 'MKCOL',
-				path: path,
-				timestamp: new Date().toISOString()
-			};
-
-			try {
-				await env.BUCKET.put(path, '');
-
-				mkcolOperationDetails.result = 'SUCCESS';
-				mkcolOperationDetails.message = 'Directory created in R2';
-				logWriteOperation('MKCOL', path, mkcolOperationDetails);
-
-				const successInfo = mkcolInfo.join('\n') + '\n- Result: SUCCESS - Directory created in R2';
-				console.log('MKCOL operation:', successInfo);
-				const response = createResponse(null, { status: 201 }, request);
-				// 记录成功的目录创建操作
-				logHttpInteraction(request, response, successInfo);
-				return response;
-			} catch (error) {
-				mkcolOperationDetails.result = 'FAILED';
-				mkcolOperationDetails.error = String(error);
-				logWriteOperation('MKCOL', path, mkcolOperationDetails);
-
-				const errorInfo = mkcolInfo.join('\n') + `\n- Result: FAILED - ${error}`;
-				console.error('MKCOL operation failed:', error);
-				const response = createResponse('Internal Server Error', { status: 500 }, request);
-				// 记录失败的目录创建操作
-				logHttpInteraction(request, response, errorInfo);
-				return response;
-			}
-
+			return await davDelegate.onGet(request);
+		case 'OPTIONS':
+			return await davDelegate.onOptions(request);
 		case 'PROPFIND':
 			return await davDelegate.onPropfind(request);
+		case 'PUT':
+			return await davDelegate.onPut(request);
+		case 'DELETE':
+			return await davDelegate.onDelete(request);
+		case 'MKCOL':
+			return await davDelegate.onMkcol(request);
 		case 'MOVE':
 		case 'COPY':
 			// 从 Destination 头解析目标路径 - 添加详细日志

@@ -80,21 +80,18 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 		try {
 			await this.env.BUCKET.put(path, body, {
 				httpMetadata: { contentType },
-			});
-
-			writeOperationDetails.result = 'SUCCESS';
-			writeOperationDetails.message = 'File written to R2';
-			logWriteOperation('PUT', path, writeOperationDetails);
+			});				writeOperationDetails.result = 'SUCCESS';
+				writeOperationDetails.message = 'File written to R2';
+				await logWriteOperation('PUT', path, writeOperationDetails);
 
 			const successInfo = writeLogInfo + '\n- Result: SUCCESS - File written to R2';
 			const response = createResponse(null, { status: 201 }, request);
 			// 记录成功的写入操作
                         await logHttpInteraction(request, response, successInfo);
 			return response;
-		} catch (error) {
-			writeOperationDetails.result = 'FAILED';
-			writeOperationDetails.error = String(error);
-			logWriteOperation('PUT', path, writeOperationDetails);
+		} catch (error) {				writeOperationDetails.result = 'FAILED';
+				writeOperationDetails.error = String(error);
+				await logWriteOperation('PUT', path, writeOperationDetails);
 
 			const errorInfo = writeLogInfo + `\n- Result: FAILED - ${error}`;
 			console.error('PUT operation failed:', error);
@@ -131,11 +128,9 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 				deleteOperationDetails.fileExists = false;
 			}
 
-			await this.env.BUCKET.delete(path);
-
-			deleteOperationDetails.result = 'SUCCESS';
-			deleteOperationDetails.message = 'File deleted from R2';
-			logWriteOperation('DELETE', path, deleteOperationDetails);
+			await this.env.BUCKET.delete(path);				deleteOperationDetails.result = 'SUCCESS';
+				deleteOperationDetails.message = 'File deleted from R2';
+				await logWriteOperation('DELETE', path, deleteOperationDetails);
 
 			const successInfo = deleteInfo.join('\n') + '\n- Result: SUCCESS - File deleted from R2';
 			console.log('DELETE operation:', successInfo);
@@ -143,10 +138,9 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 			// 记录成功的删除操作
                         await logHttpInteraction(request, response, successInfo);
 			return response;
-		} catch (error) {
-			deleteOperationDetails.result = 'FAILED';
-			deleteOperationDetails.error = String(error);
-			logWriteOperation('DELETE', path, deleteOperationDetails);
+		} catch (error) {				deleteOperationDetails.result = 'FAILED';
+				deleteOperationDetails.error = String(error);
+				await logWriteOperation('DELETE', path, deleteOperationDetails);
 
 			const errorInfo = deleteInfo.join('\n') + `\n- Result: FAILED -${error}`;
 			console.error('DELETE operation failed:', error);
@@ -177,11 +171,9 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 		};
 
 		try {
-			await this.env.BUCKET.put(path, '');
-
-			mkcolOperationDetails.result = 'SUCCESS';
-			mkcolOperationDetails.message = 'Directory created in R2';
-			logWriteOperation('MKCOL', path, mkcolOperationDetails);
+			await this.env.BUCKET.put(path, '');				mkcolOperationDetails.result = 'SUCCESS';
+				mkcolOperationDetails.message = 'Directory created in R2';
+				await logWriteOperation('MKCOL', path, mkcolOperationDetails);
 
 			const successInfo = mkcolInfo.join('\n') + '\n- Result: SUCCESS - Directory created in R2';
 			console.log('MKCOL operation:', successInfo);
@@ -189,10 +181,9 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 			// 记录成功的目录创建操作
                         await logHttpInteraction(request, response, successInfo);
 			return response;
-		} catch (error) {
-			mkcolOperationDetails.result = 'FAILED';
-			mkcolOperationDetails.error = String(error);
-			logWriteOperation('MKCOL', path, mkcolOperationDetails);
+		} catch (error) {				mkcolOperationDetails.result = 'FAILED';
+				mkcolOperationDetails.error = String(error);
+				await logWriteOperation('MKCOL', path, mkcolOperationDetails);
 
 			const errorInfo = mkcolInfo.join('\n') + `\n- Result: FAILED -${error}`;
 			console.error('MKCOL operation failed:', error);

@@ -1,11 +1,43 @@
-// HTTP调试日志
+import type { Env } from './types';
+
+// HTTP调试日志 - 保留内存缓存作为备份，主要使用 Durable Object
 let httpLogBuffer: string[] = [];
 let writeOperationLog: string[] = [];
 export const MAX_LOG_ENTRIES = 100;
 export const MAX_WRITE_LOG_ENTRIES = 50;
 
+// Global environment reference for Durable Object access
+let globalEnv: Env | null = null;
+
+// Initialize the logger with environment
+export function initLogger(env: Env): void {
+	globalEnv = env;
+}
+
+// Get Durable Object instance
+async function getLogStorageInstance(): Promise<DurableObjectStub | null> {
+	if (!globalEnv?.LOG_STORAGE) {
+		console.warn('LOG_STORAGE Durable Object not available, falling back to in-memory logging');
+		return null;
+	}
+	
+	// Use a fixed ID for the log storage to ensure all logs go to the same instance
+	const id = globalEnv.LOG_STORAGE.idFromName('global-log-storage');
+	return globalEnv.LOG_STORAGE.get(id);
+}
+
 // 获取日志状态
-export function getLogStatus() {
+export async function getLogStatus(): Promise<any> {
+	try {
+		const logStorage = await getLogStorageInstance();
+		if (logStorage) {
+			return await (logStorage as any).getLogStatus();
+		}
+	} catch (error) {
+		console.warn('Failed to get log status from Durable Object:', error);
+	}
+	
+	// Fallback to in-memory stats
 	return {
 		httpLogEntries: httpLogBuffer.length,
 		writeOperationLogEntries: writeOperationLog.length,
@@ -15,14 +47,30 @@ export function getLogStatus() {
 }
 
 // 记录写入操作的详细日志
-export function logWriteOperation(operation: string, path: string, details: any): void {
+export async function logWriteOperation(operation: string, path: string, details: any): Promise<void> {
+	try {
+		const logStorage = await getLogStorageInstance();
+		if (logStorage) {
+			await (logStorage as any).addWriteOperationLog({
+				operation,
+				path,
+				details
+			});
+			console.log(`Write operation logged to Durable Object: ${operation} on ${path}`);
+			return;
+		}
+	} catch (error) {
+		console.warn('Failed to log to Durable Object, falling back to in-memory:', error);
+	}
+
+	// Fallback to in-memory logging
 	const timestamp = new Date().toISOString();
-	const logEntry = `=== ${timestamp} - ${operation} ===\n` +
+	const textLogEntry = `=== ${timestamp} - ${operation} ===\n` +
 		`Path: ${path}\n` +
 		`Details: ${JSON.stringify(details, null, 2)}\n` +
 		'---\n\n';
 
-	writeOperationLog.push(logEntry);
+	writeOperationLog.push(textLogEntry);
 
 	// 保持缓冲区大小
 	if (writeOperationLog.length > MAX_WRITE_LOG_ENTRIES) {
@@ -33,12 +81,34 @@ export function logWriteOperation(operation: string, path: string, details: any)
 }
 
 // 获取写入操作日志
-export function getWriteOperationLog(): string {
+export async function getWriteOperationLog(): Promise<string> {
+	try {
+		const logStorage = await getLogStorageInstance();
+		if (logStorage) {
+			const result = await (logStorage as any).getWriteOperationLogs('text');
+			return result as string;
+		}
+	} catch (error) {
+		console.warn('Failed to get logs from Durable Object, falling back to in-memory:', error);
+	}
+	
+	// Fallback to in-memory logs
 	return writeOperationLog.join('');
 }
 
 // 清空写入操作日志
-export function clearWriteOperationLog(): void {
+export async function clearWriteOperationLog(): Promise<void> {
+	try {
+		const logStorage = await getLogStorageInstance();
+		if (logStorage) {
+			await (logStorage as any).clearWriteOperationLogs();
+			return;
+		}
+	} catch (error) {
+		console.warn('Failed to clear logs in Durable Object, falling back to in-memory:', error);
+	}
+	
+	// Fallback to in-memory clear
 	writeOperationLog = [];
 }
 
@@ -86,22 +156,43 @@ function formatHttpResponse(response: Response): string {
 export async function logHttpInteraction(request: Request, response: Response, additionalInfo?: string): Promise<void> {
 	const timestamp = new Date().toISOString();
 	const url = new URL(request.url);
+
+	// Try to log to Durable Object first
+	try {
+		const logStorage = await getLogStorageInstance();
+		if (logStorage) {
+			const httpLogEntry = {
+				method: request.method,
+				url: url.toString(),
+				status: response.status,
+				requestHeaders: (() => {
+					const headers: Record<string, string> = {};
+					request.headers.forEach((value, key) => { headers[key] = value; });
+					return headers;
+				})(),
+				responseHeaders: (() => {
+					const headers: Record<string, string> = {};
+					response.headers.forEach((value, key) => { headers[key] = value; });
+					return headers;
+				})(),
+				additionalInfo
+			};
+
+			await (logStorage as any).addHttpLog(httpLogEntry);
+			console.log(`HTTP ${request.method} ${url.pathname} → ${response.status} (logged to Durable Object)`);
+			return;
+		}
+	} catch (error) {
+		console.warn('Failed to log HTTP interaction to Durable Object, falling back to in-memory:', error);
+	}
+
+	// Fallback to in-memory logging
 	const logEntry = `=== ${timestamp} ===\n` +
 		formatHttpRequest(request, additionalInfo) +
 		formatHttpResponse(response) +
 		'---\n\n';
 
-        httpLogBuffer.push(logEntry);
-
-        // 如果在本地调试环境并设置了日志文件路径，额外写入文件
-        if (typeof process !== 'undefined' && process.env.DEBUG_HTTP_LOG_FILE) {
-                try {
-                        const { appendFile } = await import('node:fs/promises');
-                        await appendFile(process.env.DEBUG_HTTP_LOG_FILE, logEntry);
-                } catch (e) {
-                        console.warn('Failed to write http log to file:', e);
-                }
-        }
+	httpLogBuffer.push(logEntry);
 
 	// 保持缓冲区大小
 	if (httpLogBuffer.length > MAX_LOG_ENTRIES) {
@@ -116,23 +207,45 @@ export async function logHttpInteraction(request: Request, response: Response, a
 }
 
 // 获取完整的HTTP日志
-export function getHttpLog(): string {
+export async function getHttpLog(): Promise<string> {
+	try {
+		const logStorage = await getLogStorageInstance();
+		if (logStorage) {
+			const result = await (logStorage as any).getHttpLogs('text');
+			return result as string;
+		}
+	} catch (error) {
+		console.warn('Failed to get HTTP logs from Durable Object, falling back to in-memory:', error);
+	}
+	
+	// Fallback to in-memory logs
 	return httpLogBuffer.join('');
 }
 
 // 清空HTTP日志
-export function clearHttpLog(): void {
+export async function clearHttpLog(): Promise<void> {
+	try {
+		const logStorage = await getLogStorageInstance();
+		if (logStorage) {
+			await (logStorage as any).clearHttpLogs();
+			return;
+		}
+	} catch (error) {
+		console.warn('Failed to clear HTTP logs in Durable Object, falling back to in-memory:', error);
+	}
+	
+	// Fallback to in-memory clear
 	httpLogBuffer = [];
 }
 // 处理调试路由
-export function handleDebugRoutes(request: Request): Response | null {
+export async function handleDebugRoutes(request: Request): Promise<Response | null> {
 	const url = new URL(request.url);
 	const pathname = url.pathname;
 	const method = request.method;
 
 	// 调试面板（提供所有调试功能的链接）
 	if (method === 'GET' && pathname === '/_debug') {
-		const logStatus = getLogStatus();
+		const logStatus = await getLogStatus();
 		const debugPanel = `
 WebDAV Debug Panel
 ==================
@@ -171,9 +284,9 @@ Usage Examples:
 
 Log Status:
 ===========
-- HTTP Log Entries:${logStatus.httpLogEntries}
+- HTTP Log Entries: ${logStatus.httpLogEntries}
 - Write Operation Log Entries: ${logStatus.writeOperationLogEntries}
-- Max HTTP Log Entries:${logStatus.maxHttpLogEntries}
+- Max HTTP Log Entries: ${logStatus.maxHttpLogEntries}
 - Max Write Log Entries: ${logStatus.maxWriteLogEntries}
 		`;
 
@@ -185,11 +298,12 @@ Log Status:
 	// HTTP日志相关路由
 	if (pathname === '/_debug/http-log') {
 		if (method === 'GET') {
-			return new Response(getHttpLog(), {
+			const httpLog = await getHttpLog();
+			return new Response(httpLog, {
 				headers: { 'Content-Type': 'text/plain' }
 			});
 		} else if (method === 'DELETE') {
-			clearHttpLog();
+			await clearHttpLog();
 			return new Response('HTTP log cleared', {
 				headers: { 'Content-Type': 'text/plain' }
 			});
@@ -199,11 +313,12 @@ Log Status:
 	// 写入操作日志相关路由
 	if (pathname === '/_debug/write-log') {
 		if (method === 'GET') {
-			return new Response(getWriteOperationLog(), {
+			const writeLog = await getWriteOperationLog();
+			return new Response(writeLog, {
 				headers: { 'Content-Type': 'text/plain' }
 			});
 		} else if (method === 'DELETE') {
-			clearWriteOperationLog();
+			await clearWriteOperationLog();
 			return new Response('Write operation log cleared', {
 				headers: { 'Content-Type': 'text/plain' }
 			});
@@ -213,14 +328,16 @@ Log Status:
 	// 所有日志相关路由
 	if (pathname === '/_debug/all-logs') {
 		if (method === 'GET') {
-			const allLogs = '=== HTTP LOGS ===\n\n' + getHttpLog() +
-				'\n\n=== WRITE OPERATION LOGS ===\n\n' + getWriteOperationLog();
+			const httpLog = await getHttpLog();
+			const writeLog = await getWriteOperationLog();
+			const allLogs = '=== HTTP LOGS ===\n\n' + httpLog +
+				'\n\n=== WRITE OPERATION LOGS ===\n\n' + writeLog;
 			return new Response(allLogs, {
 				headers: { 'Content-Type': 'text/plain' }
 			});
 		} else if (method === 'DELETE') {
-			clearHttpLog();
-			clearWriteOperationLog();
+			await clearHttpLog();
+			await clearWriteOperationLog();
 			return new Response('All logs cleared', {
 				headers: { 'Content-Type': 'text/plain' }
 			});
@@ -229,22 +346,22 @@ Log Status:
 
 	// 通过GET请求清空日志（方便在浏览器中操作）
 	if (method === 'GET' && pathname === '/_debug/clear-http-log') {
-		clearHttpLog();
+		await clearHttpLog();
 		return new Response('HTTP log cleared successfully!\n\nYou can now go back to view the logs.', {
 			headers: { 'Content-Type': 'text/plain' }
 		});
 	}
 
 	if (method === 'GET' && pathname === '/_debug/clear-write-log') {
-		clearWriteOperationLog();
+		await clearWriteOperationLog();
 		return new Response('Write operation log cleared successfully!\n\nYou can now go back to view the logs.', {
 			headers: { 'Content-Type': 'text/plain' }
 		});
 	}
 
 	if (method === 'GET' && pathname === '/_debug/clear-all-logs') {
-		clearHttpLog();
-		clearWriteOperationLog();
+		await clearHttpLog();
+		await clearWriteOperationLog();
 		console.log('All logs cleared via GET request');
 		return new Response('All logs cleared successfully!\n\nYou can now go back to view the logs.', {
 			headers: { 'Content-Type': 'text/plain' }

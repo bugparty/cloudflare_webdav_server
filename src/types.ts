@@ -3,6 +3,7 @@ export interface Env {
 	DB: D1Database;
 	WEBDAV_USERNAME?: string;
 	WEBDAV_PASSWORD?: string;
+	LOG_STORAGE: DurableObjectNamespace;
 }
 
 export interface ObjectMetadata {

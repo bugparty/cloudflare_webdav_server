@@ -1,17 +1,21 @@
 import { WebDAVDelegate, Env, ObjectMetadata } from './types';
-import { logWriteOperation, logHttpInteraction, handleDebugRoutes } from './logger';
+import { logWriteOperation, logHttpInteraction, handleDebugRoutes, initLogger } from './logger';
 import { isMacOSWebDAVClient, authenticateRequest, unauthorizedResponse, createResponse, handleMacOSOptionsRequest } from './macos';
 import { WebDAVDelegateImpl } from './webdav-delegate';
-import { a } from 'vitest/dist/chunks/suite.d.FvehnV49.js';
+import { LogStorage } from './log-storage';
+
 // 主要的请求处理函数
 async function handleWebDAVRequest(request: Request, env: Env): Promise<Response> {
+	// Initialize logger with environment for Durable Object access
+	initLogger(env);
+
 	const userAgent = request.headers.get('user-agent') || '';
 	const isMacOS = isMacOSWebDAVClient(userAgent);
 	let davDelegate = new WebDAVDelegateImpl();
 	davDelegate.init(env);
 
 	// 处理调试路由
-	const debugResponse = handleDebugRoutes(request);
+	const debugResponse = await handleDebugRoutes(request);
 	if (debugResponse) {
 		return debugResponse;
 	}
@@ -84,7 +88,7 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 				if (!sourceObj) {
 					moveOperationDetails.result = 'FAILED';
 					moveOperationDetails.error = 'Source file not found';
-					logWriteOperation(request.method, path, moveOperationDetails);
+					await logWriteOperation(request.method, path, moveOperationDetails);
 
 					const notFoundInfo = moveInfo.join('\n') + '\n- Result: FAILED - Source file not found';
 					const response = createResponse('Not Found', { status: 404 }, request);
@@ -107,7 +111,7 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 
 				moveOperationDetails.result = 'SUCCESS';
 				moveOperationDetails.message = 'File operation completed';
-				logWriteOperation(request.method, path, moveOperationDetails);
+				await logWriteOperation(request.method, path, moveOperationDetails);
 
 				const successInfo = moveInfo.join('\n') + '\n- Result: SUCCESS - File operation completed';
 				console.log(`${request.method} operation:`, successInfo);
@@ -118,7 +122,7 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 			} catch (error) {
 				moveOperationDetails.result = 'FAILED';
 				moveOperationDetails.error = String(error);
-				logWriteOperation(request.method, path, moveOperationDetails);
+				await logWriteOperation(request.method, path, moveOperationDetails);
 
 				const errorInfo = moveInfo.join('\n') + `\n- Result: FAILED - ${error}`;
 				console.error(`${request.method} operation failed:`, error);
@@ -159,3 +163,6 @@ export default {
 		return response;
 	},
 } as ExportedHandler<Env>;
+
+// Export the Durable Object class
+export { LogStorage };

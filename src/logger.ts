@@ -20,7 +20,7 @@ async function getLogStorageInstance(): Promise<DurableObjectStub | null> {
 		console.warn('LOG_STORAGE Durable Object not available, falling back to in-memory logging');
 		return null;
 	}
-	
+
 	// Use a fixed ID for the log storage to ensure all logs go to the same instance
 	const id = globalEnv.LOG_STORAGE.idFromName('global-log-storage');
 	return globalEnv.LOG_STORAGE.get(id);
@@ -36,7 +36,7 @@ export async function getLogStatus(): Promise<any> {
 	} catch (error) {
 		console.warn('Failed to get log status from Durable Object:', error);
 	}
-	
+
 	// Fallback to in-memory stats
 	return {
 		httpLogEntries: httpLogBuffer.length,
@@ -91,7 +91,7 @@ export async function getWriteOperationLog(): Promise<string> {
 	} catch (error) {
 		console.warn('Failed to get logs from Durable Object, falling back to in-memory:', error);
 	}
-	
+
 	// Fallback to in-memory logs
 	return writeOperationLog.join('');
 }
@@ -107,7 +107,7 @@ export async function clearWriteOperationLog(): Promise<void> {
 	} catch (error) {
 		console.warn('Failed to clear logs in Durable Object, falling back to in-memory:', error);
 	}
-	
+
 	// Fallback to in-memory clear
 	writeOperationLog = [];
 }
@@ -217,7 +217,7 @@ export async function getHttpLog(): Promise<string> {
 	} catch (error) {
 		console.warn('Failed to get HTTP logs from Durable Object, falling back to in-memory:', error);
 	}
-	
+
 	// Fallback to in-memory logs
 	return httpLogBuffer.join('');
 }
@@ -233,7 +233,7 @@ export async function clearHttpLog(): Promise<void> {
 	} catch (error) {
 		console.warn('Failed to clear HTTP logs in Durable Object, falling back to in-memory:', error);
 	}
-	
+
 	// Fallback to in-memory clear
 	httpLogBuffer = [];
 }

@@ -5,6 +5,7 @@
 	"scripts": {
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev --port 8080",
+		"dev2": "DEBUG_HTTP_LOG_FILE=./http.log wrangler dev --port 8080 --inspector-port  9229",
 		"debug": "wrangler dev  --inspector-port  9229 --port 8080",
 		"start": "wrangler dev",
 		"test": "vitest  --run",

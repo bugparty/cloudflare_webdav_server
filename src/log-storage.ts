@@ -57,7 +57,7 @@ export class LogStorage extends DurableObject {
     await this.ctx.storage.sql.exec(`
       CREATE INDEX IF NOT EXISTS idx_write_logs_timestamp ON write_operation_logs(timestamp)
     `);
-    
+
     await this.ctx.storage.sql.exec(`
       CREATE INDEX IF NOT EXISTS idx_http_logs_timestamp ON http_logs(timestamp)
     `);
@@ -71,9 +71,9 @@ export class LogStorage extends DurableObject {
   }): Promise<{ success: boolean; id: string }> {
     const id = crypto.randomUUID();
     const timestamp = new Date().toISOString();
-    
+
     await this.ctx.storage.sql.exec(
-      `INSERT INTO write_operation_logs (id, timestamp, operation, path, details) 
+      `INSERT INTO write_operation_logs (id, timestamp, operation, path, details)
        VALUES (?, ?, ?, ?, ?)`,
       id,
       timestamp,
@@ -84,10 +84,10 @@ export class LogStorage extends DurableObject {
 
     // Keep only the last 50 entries
     await this.ctx.storage.sql.exec(
-      `DELETE FROM write_operation_logs 
+      `DELETE FROM write_operation_logs
        WHERE id NOT IN (
-         SELECT id FROM write_operation_logs 
-         ORDER BY timestamp DESC 
+         SELECT id FROM write_operation_logs
+         ORDER BY timestamp DESC
          LIMIT 50
        )`
     );
@@ -98,8 +98,8 @@ export class LogStorage extends DurableObject {
   // RPC method to get write operation logs
   async getWriteOperationLogs(format: 'json' | 'text' = 'json'): Promise<LogEntry[] | string> {
     const result = this.ctx.storage.sql.exec(
-      `SELECT id, timestamp, operation, path, details 
-       FROM write_operation_logs 
+      `SELECT id, timestamp, operation, path, details
+       FROM write_operation_logs
        ORDER BY timestamp DESC`
     );
 
@@ -115,7 +115,7 @@ export class LogStorage extends DurableObject {
     }
 
     if (format === 'text') {
-      return logs.map(log => 
+      return logs.map(log =>
         `=== ${log.timestamp} - ${log.operation} ===\n` +
         `Path: ${log.path}\n` +
         `Details: ${log.details}\n` +
@@ -143,9 +143,9 @@ export class LogStorage extends DurableObject {
   }): Promise<{ success: boolean; id: string }> {
     const id = crypto.randomUUID();
     const timestamp = new Date().toISOString();
-    
+
     await this.ctx.storage.sql.exec(
-      `INSERT INTO http_logs (id, timestamp, method, url, status, request_headers, response_headers, additional_info) 
+      `INSERT INTO http_logs (id, timestamp, method, url, status, request_headers, response_headers, additional_info)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       id,
       timestamp,
@@ -159,10 +159,10 @@ export class LogStorage extends DurableObject {
 
     // Keep only the last 100 entries
     await this.ctx.storage.sql.exec(
-      `DELETE FROM http_logs 
+      `DELETE FROM http_logs
        WHERE id NOT IN (
-         SELECT id FROM http_logs 
-         ORDER BY timestamp DESC 
+         SELECT id FROM http_logs
+         ORDER BY timestamp DESC
          LIMIT 100
        )`
     );
@@ -173,8 +173,8 @@ export class LogStorage extends DurableObject {
   // RPC method to get HTTP logs
   async getHttpLogs(format: 'json' | 'text' = 'json'): Promise<HttpLogEntry[] | string> {
     const result = this.ctx.storage.sql.exec(
-      `SELECT id, timestamp, method, url, status, request_headers, response_headers, additional_info 
-       FROM http_logs 
+      `SELECT id, timestamp, method, url, status, request_headers, response_headers, additional_info
+       FROM http_logs
        ORDER BY timestamp DESC`
     );
 
@@ -196,25 +196,25 @@ export class LogStorage extends DurableObject {
       return logs.map(log => {
         const requestHeaders = JSON.parse(log.requestHeaders);
         const responseHeaders = JSON.parse(log.responseHeaders);
-        
+
         const requestHeadersText = Object.entries(requestHeaders)
           .map(([name, value]) => `${name.charAt(0).toUpperCase() + name.slice(1)}: ${value}`)
           .join('\n');
-        
+
         const responseHeadersText = Object.entries(responseHeaders)
           .map(([name, value]) => `${name.charAt(0).toUpperCase() + name.slice(1)}: ${value}`)
           .join('\n');
-        
+
         let logText = `=== ${log.timestamp} ===\n`;
         logText += `${log.method} ${log.url} HTTP/1.1\n`;
         logText += `${requestHeadersText}\n\n`;
         logText += `HTTP/1.1 ${log.status}\n`;
         logText += `${responseHeadersText}\n\n`;
-        
+
         if (log.additionalInfo) {
           logText += `${log.additionalInfo}\n\n`;
         }
-        
+
         logText += '---\n\n';
         return logText;
       }).join('');

@@ -750,8 +750,17 @@ function renderResponse(href: string, obj: ObjectMetadata, isCollection: boolean
 	const contentType = obj.httpMetadata.contentType || (isCollection ? 'httpd/unix-directory' : getMimeType(href));
 	const displayName = href.split('/').filter(p => p).pop() || '/';
 
+	// URL-encode the href path per RFC 4918
+	// Split by '/' to preserve path separators, encode each segment
+	const encodedHref = href.split('/').map(segment => {
+		// Don't encode empty segments (leading/trailing slashes)
+		if (!segment) return segment;
+		// Use encodeURIComponent for proper URL encoding
+		return encodeURIComponent(segment);
+	}).join('/');
+
 	return `<D:response>
-    <D:href>${escapeXml(href)}</D:href>
+    <D:href>${escapeXml(encodedHref)}</D:href>
     <D:propstat>
       <D:prop>
         <D:getlastmodified>${lastmod}</D:getlastmodified>

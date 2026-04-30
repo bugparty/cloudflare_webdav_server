@@ -1,6 +1,7 @@
 import { Env } from './types';
 import { logHttpInteraction, handleDebugRoutes } from './logger';
 import { LogDurableObject } from './log-do';
+import { logToD1 } from './log-persistence';
 import {
 	isMacOSWebDAVClient,
 	authenticateRequest,
@@ -66,8 +67,41 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 	}
 }
 
+async function logPersistentTargets(
+	request: Request,
+	response: Response,
+	env: Env,
+	additionalInfo?: string
+): Promise<void> {
+	const url = new URL(request.url);
+	const path = `${url.pathname}${url.search}`;
+
+	if (env.DB) {
+		try {
+			await logToD1(env.DB, request, response, additionalInfo);
+		} catch (e) {
+			console.error('Failed to log to D1:', e);
+		}
+	}
+
+	if (env.LOG_DO) {
+		try {
+			const id = env.LOG_DO.idFromName('global');
+			const stub = env.LOG_DO.get(id);
+			const timestamp = new Date().toISOString();
+			const logEntry = `${timestamp} - ${request.method} ${path} -> ${response.status}`;
+			await stub.fetch('http://internal/', {
+				method: 'POST',
+				body: logEntry
+			});
+		} catch (e) {
+			console.error('Failed to log to Durable Object:', e);
+		}
+	}
+}
+
 export default {
-	async fetch(request: Request, env: Env): Promise<Response> {
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		let response: Response;
 		let additionalInfo: string | undefined;
 
@@ -80,29 +114,13 @@ export default {
 		}
 
 		// Record HTTP interaction logs
-		const method = request.method;
 		const url = new URL(request.url);
 		const isDebugRoute = url.pathname.startsWith('/_debug');
 
 		// Log to memory (for immediate viewing)
 		if (!isDebugRoute) {
 			logHttpInteraction(request, response, additionalInfo);
-		}
-
-		// Log to Durable Object (real-time streaming)
-		if (!isDebugRoute && env.LOG_DO) {
-			try {
-				const id = env.LOG_DO.idFromName('global');
-				const stub = env.LOG_DO.get(id);
-				const timestamp = new Date().toISOString();
-				const logEntry = `${timestamp} - ${request.method} ${url.pathname} → ${response.status}`;
-				await stub.fetch('http://internal/', {
-					method: 'POST',
-					body: logEntry
-				});
-			} catch (e) {
-				console.error('Failed to log to Durable Object:', e);
-			}
+			ctx.waitUntil(logPersistentTargets(request, response, env, additionalInfo));
 		}
 
 		return response;

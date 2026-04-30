@@ -1,6 +1,7 @@
 /**
  * Persistent logging using D1 database with real-time streaming support.
  */
+import { headersToLogObject } from './log-sanitize';
 
 export interface LogEntry {
 	id?: number;
@@ -8,19 +9,22 @@ export interface LogEntry {
 	method: string;
 	path: string;
 	status: number;
-	user_agent?: string;
-	ip?: string;
-	request_headers?: string;
-	response_headers?: string;
-	body_info?: string;
+	user_agent?: string | null;
+	ip?: string | null;
+	request_headers?: string | null;
+	response_headers?: string | null;
+	body_info?: string | null;
 	created_at?: string;
 }
+
+let logTableInitialization: Promise<void> | undefined;
 
 /**
  * Initialize the log table in D1
  */
 export async function initializeLogTable(db: D1Database): Promise<void> {
-	await db.exec(`
+	const statements = [
+		`
 		CREATE TABLE IF NOT EXISTS http_logs (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			timestamp TEXT NOT NULL,
@@ -33,13 +37,28 @@ export async function initializeLogTable(db: D1Database): Promise<void> {
 			response_headers TEXT,
 			body_info TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		);
+		)
+		`,
+		'CREATE INDEX IF NOT EXISTS idx_timestamp ON http_logs(timestamp DESC)',
+		'CREATE INDEX IF NOT EXISTS idx_method ON http_logs(method)',
+		'CREATE INDEX IF NOT EXISTS idx_path ON http_logs(path)',
+		'CREATE INDEX IF NOT EXISTS idx_status ON http_logs(status)'
+	];
 
-		CREATE INDEX IF NOT EXISTS idx_timestamp ON http_logs(timestamp DESC);
-		CREATE INDEX IF NOT EXISTS idx_method ON http_logs(method);
-		CREATE INDEX IF NOT EXISTS idx_path ON http_logs(path);
-		CREATE INDEX IF NOT EXISTS idx_status ON http_logs(status);
-	`);
+	for (const statement of statements) {
+		await db.prepare(statement).run();
+	}
+}
+
+export async function ensureLogTable(db: D1Database): Promise<void> {
+	if (!logTableInitialization) {
+		logTableInitialization = initializeLogTable(db).catch(error => {
+			logTableInitialization = undefined;
+			throw error;
+		});
+	}
+
+	await logTableInitialization;
 }
 
 /**
@@ -51,20 +70,11 @@ export async function logToD1(
 	response: Response,
 	additionalInfo?: string
 ): Promise<void> {
+	await ensureLogTable(db);
+
 	const timestamp = new Date().toISOString();
 	const url = new URL(request.url);
-
-	// Extract request headers
-	const requestHeaders: Record<string, string> = {};
-	request.headers.forEach((value, name) => {
-		requestHeaders[name] = value;
-	});
-
-	// Extract response headers
-	const responseHeaders: Record<string, string> = {};
-	response.headers.forEach((value, name) => {
-		responseHeaders[name] = value;
-	});
+	const path = `${url.pathname}${url.search}`;
 
 	await db.prepare(`
 		INSERT INTO http_logs (
@@ -74,13 +84,13 @@ export async function logToD1(
 	`).bind(
 		timestamp,
 		request.method,
-		url.pathname,
+		path,
 		response.status,
-		request.headers.get('user-agent') || undefined,
-		request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || undefined,
-		JSON.stringify(requestHeaders),
-		JSON.stringify(responseHeaders),
-		additionalInfo || undefined
+		request.headers.get('user-agent') || null,
+		request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || null,
+		JSON.stringify(headersToLogObject(request.headers)),
+		JSON.stringify(headersToLogObject(response.headers)),
+		additionalInfo || null
 	).run();
 }
 
@@ -91,6 +101,8 @@ export async function getRecentLogs(
 	db: D1Database,
 	limit: number = 100
 ): Promise<LogEntry[]> {
+	await ensureLogTable(db);
+
 	const result = await db.prepare(`
 		SELECT * FROM http_logs
 		ORDER BY timestamp DESC
@@ -108,6 +120,8 @@ export async function getLogsByPath(
 	pathPattern: string,
 	limit: number = 100
 ): Promise<LogEntry[]> {
+	await ensureLogTable(db);
+
 	const result = await db.prepare(`
 		SELECT * FROM http_logs
 		WHERE path LIKE ?
@@ -126,6 +140,8 @@ export async function getLogsByMethod(
 	method: string,
 	limit: number = 100
 ): Promise<LogEntry[]> {
+	await ensureLogTable(db);
+
 	const result = await db.prepare(`
 		SELECT * FROM http_logs
 		WHERE method = ?
@@ -143,6 +159,8 @@ export async function clearOldLogs(
 	db: D1Database,
 	daysToKeep: number = 7
 ): Promise<number> {
+	await ensureLogTable(db);
+
 	const cutoffDate = new Date();
 	cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
@@ -158,6 +176,8 @@ export async function clearOldLogs(
  * Clear all logs
  */
 export async function clearAllLogs(db: D1Database): Promise<number> {
+	await ensureLogTable(db);
+
 	const result = await db.prepare('DELETE FROM http_logs').run();
 	return result.meta.changes;
 }
@@ -170,6 +190,8 @@ export async function getLogStats(db: D1Database): Promise<{
 	byMethod: Record<string, number>;
 	byStatus: Record<string, number>;
 }> {
+	await ensureLogTable(db);
+
 	const totalResult = await db.prepare('SELECT COUNT(*) as count FROM http_logs').first<{ count: number }>();
 	const total = totalResult?.count || 0;
 

@@ -98,7 +98,7 @@ export function authenticateRequest(request: Request, env: Env): boolean {
 	//console.log('Is macOS client:', isMacOS);
 
 	const authHeader = request.headers.get('Authorization');
-	console.log('Authorization header:', authHeader);
+	console.log('Authorization header:', authHeader ? '[present]' : '[missing]');
 
 	if (!authHeader || !authHeader.startsWith('Basic ')) {
 		console.log('Missing or invalid Authorization header');

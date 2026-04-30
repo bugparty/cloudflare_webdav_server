@@ -7,8 +7,6 @@
 
 export class LogDurableObject {
 	private state: DurableObjectState;
-	private sessions: WebSocket[] = [];
-	private logs: string[] = [];
 	private maxLogs: number = 1000;
 
 	constructor(state: DurableObjectState) {
@@ -27,13 +25,14 @@ export class LogDurableObject {
 		// Add log entry
 		if (request.method === 'POST') {
 			const logEntry = await request.text();
-			this.addLog(logEntry);
+			await this.addLog(logEntry);
 			return new Response('OK', { status: 201 });
 		}
 
 		// Get all logs
 		if (url.pathname === '/logs' && request.method === 'GET') {
-			return new Response(this.logs.join('\n'), {
+			const logs = await this.getLogs();
+			return new Response(logs.join('\n'), {
 				headers: { 'Content-Type': 'text/plain' }
 			});
 		}
@@ -41,7 +40,8 @@ export class LogDurableObject {
 		// Get recent logs
 		if (url.pathname === '/recent' && request.method === 'GET') {
 			const limit = parseInt(url.searchParams.get('limit') || '100');
-			const recent = this.logs.slice(-limit);
+			const logs = await this.getLogs();
+			const recent = logs.slice(-limit);
 			return new Response(recent.join('\n'), {
 				headers: { 'Content-Type': 'text/plain' }
 			});
@@ -49,15 +49,16 @@ export class LogDurableObject {
 
 		// Clear logs
 		if (url.pathname === '/clear' && request.method === 'DELETE') {
-			this.logs = [];
+			await this.state.storage.delete('logs');
 			return new Response('Logs cleared', { status: 200 });
 		}
 
 		// Get stats
 		if (url.pathname === '/stats' && request.method === 'GET') {
+			const logs = await this.getLogs();
 			return new Response(JSON.stringify({
-				total: this.logs.length,
-				sessions: this.sessions.length
+				total: logs.length,
+				sessions: this.state.getWebSockets().length
 			}), {
 				headers: { 'Content-Type': 'application/json' }
 			});
@@ -74,11 +75,9 @@ export class LogDurableObject {
 		// Accept the WebSocket connection
 		this.state.acceptWebSocket(server);
 
-		// Add to sessions list
-		this.sessions.push(server);
-
 		// Send recent logs to the new client
-		const recentLogs = this.logs.slice(-50);
+		const logs = await this.getLogs();
+		const recentLogs = logs.slice(-50);
 		if (recentLogs.length > 0) {
 			server.send(recentLogs.join('\n'));
 		}
@@ -91,43 +90,36 @@ export class LogDurableObject {
 		// Client can request specific actions
 		if (typeof message === 'string') {
 			if (message === 'clear') {
-				this.logs = [];
+				await this.state.storage.delete('logs');
 				this.broadcast('Logs cleared');
 			}
 		}
 	}
 
-	// Handle WebSocket close
-	async webSocketClose(ws: WebSocket): Promise<void> {
-		this.sessions = this.sessions.filter(s => s !== ws);
-	}
-
-	// Handle WebSocket error
-	async webSocketError(ws: WebSocket): Promise<void> {
-		this.sessions = this.sessions.filter(s => s !== ws);
-	}
-
 	// Add a log entry
-	private addLog(entry: string): void {
-		this.logs.push(entry);
+	private async addLog(entry: string): Promise<void> {
+		const logs = await this.getLogs();
+		logs.push(entry);
 
 		// Keep only the most recent logs
-		if (this.logs.length > this.maxLogs) {
-			this.logs = this.logs.slice(-this.maxLogs);
-		}
+		const recent = logs.length > this.maxLogs ? logs.slice(-this.maxLogs) : logs;
+		await this.state.storage.put('logs', recent);
 
 		// Broadcast to all connected clients
 		this.broadcast(entry);
 	}
 
+	private async getLogs(): Promise<string[]> {
+		return await this.state.storage.get<string[]>('logs') || [];
+	}
+
 	// Broadcast message to all WebSocket clients
 	private broadcast(message: string): void {
-		for (const session of this.sessions) {
+		for (const session of this.state.getWebSockets()) {
 			try {
 				session.send(message);
 			} catch (e) {
-				// Remove failed sessions
-				this.sessions = this.sessions.filter(s => s !== session);
+				session.close(1011, 'Log broadcast failed');
 			}
 		}
 	}

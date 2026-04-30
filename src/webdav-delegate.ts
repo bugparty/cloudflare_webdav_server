@@ -666,25 +666,34 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 			return createResponse('Locked', { status: lockCheck.status! }, request);
 		}
 
-		// Check whether the file exists first
-		const existingObj = await this.env.BUCKET.get(path);
-		if (!existingObj) {
+		// Check whether the resource exists (file or directory)
+		const resourceInfo = await getResourceInfo(path, this.env.BUCKET);
+		if (!resourceInfo) {
 			return createResponse('Not Found', { status: 404 }, request);
 		}
 
 		// Validate the If-Match condition
 		const ifMatch = request.headers.get('If-Match');
 		if (ifMatch) {
-			const matchResult = await validateIfMatch(ifMatch, existingObj);
-			if (!matchResult.valid) {
-				return createResponse('Precondition Failed', { status: matchResult.status! }, request);
+			const existingObj = await this.env.BUCKET.get(path);
+			if (existingObj) {
+				const matchResult = await validateIfMatch(ifMatch, existingObj);
+				if (!matchResult.valid) {
+					return createResponse('Precondition Failed', { status: matchResult.status! }, request);
+				}
 			}
 		}
 
 		console.log(`DELETE operation: ${path}`);
 
 		try {
-			await this.env.BUCKET.delete(path);
+			if (resourceInfo.isCollection) {
+				// Delete directory and all its contents
+				await deleteCollection(ensureTrailingSlash(path), this.env.BUCKET);
+			} else {
+				// Delete single file
+				await this.env.BUCKET.delete(path);
+			}
 			logWriteOperation('DELETE', path, { operation: 'DELETE', path, result: 'SUCCESS' });
 			const response = createResponse(null, { status: 204 }, request);
 			logHttpInteraction(request, response, 'DELETE SUCCESS');

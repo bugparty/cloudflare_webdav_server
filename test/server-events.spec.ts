@@ -19,8 +19,6 @@ describe('WebDAV Server Events', () => {
 	describe('testAfterCreateFile', () => {
 		it('should trigger afterCreateFile event after creating a file', async () => {
 			const testEnv = createTestEnv();
-			let triggered = false;
-			let filePath = '';
 
 			// We simulate the event by verifying the file was created
 			const request = t.createAuthRequest('PUT', '/afterCreateFile', {

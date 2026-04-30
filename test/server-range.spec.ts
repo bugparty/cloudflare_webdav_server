@@ -115,8 +115,10 @@ describe('WebDAV Server Range Requests', () => {
 			const testEnv = createTestEnv();
 			await t.createTestFile('test.txt', 'Test contents', 'text/plain', testEnv);
 
-			const obj = await testEnv.BUCKET.get('test.txt');
-			const etag = obj?.httpMetadata?.etag || '';
+				// ETag is computed from file content, not stored in httpMetadata
+				const headRequest = t.createAuthRequest('HEAD', '/test.txt');
+				const headResponse = await executeRequest(headRequest, testEnv);
+				const etag = headResponse.headers.get('ETag') || '';
 
 			const request = t.createAuthRequest('GET', '/test.txt', {
 				headers: {

@@ -54,8 +54,11 @@ describe('WebDAV Server Preconditions', () => {
 			const testEnv = createTestEnv();
 			await t.createTestFile('foo', 'content', 'text/plain', testEnv);
 
-			const obj = await testEnv.BUCKET.get('foo');
-			const etag = obj?.httpMetadata?.etag || '"abc123"';
+			// ETag is computed from file content, not stored in httpMetadata
+			// Get ETag from a HEAD request
+			const headRequest = t.createAuthRequest('HEAD', '/foo');
+			const headResponse = await executeRequest(headRequest, testEnv);
+			const etag = headResponse.headers.get('ETag') || '"abc123"';
 
 			const request = t.createAuthRequest('GET', '/foo', {
 				headers: { 'If-Match': etag }
@@ -69,8 +72,10 @@ describe('WebDAV Server Preconditions', () => {
 			const testEnv = createTestEnv();
 			await t.createTestFile('foo', 'content', 'text/plain', testEnv);
 
-			const obj = await testEnv.BUCKET.get('foo');
-			const etag = obj?.httpMetadata?.etag || '"abc123"';
+			// ETag is computed from file content, not stored in httpMetadata
+			const headRequest = t.createAuthRequest('HEAD', '/foo');
+			const headResponse = await executeRequest(headRequest, testEnv);
+			const etag = headResponse.headers.get('ETag') || '"abc123"';
 
 			const request = t.createAuthRequest('GET', '/foo', {
 				headers: { 'If-Match': `"wrong-etag", ${etag}` }
@@ -145,8 +150,10 @@ describe('WebDAV Server Preconditions', () => {
 			const testEnv = createTestEnv();
 			await t.createTestFile('foo', 'content', 'text/plain', testEnv);
 
-			const obj = await testEnv.BUCKET.get('foo');
-			const etag = obj?.httpMetadata?.etag || '"abc123"';
+			// ETag is computed from file content, not stored in httpMetadata
+			const headRequest = t.createAuthRequest('HEAD', '/foo');
+			const headResponse = await executeRequest(headRequest, testEnv);
+			const etag = headResponse.headers.get('ETag') || '"abc123"';
 
 			const request = t.createAuthRequest('POST', '/foo', {
 				body: 'new content',
@@ -164,8 +171,10 @@ describe('WebDAV Server Preconditions', () => {
 			const testEnv = createTestEnv();
 			await t.createTestFile('foo', 'content', 'text/plain', testEnv);
 
-			const obj = await testEnv.BUCKET.get('foo');
-			const etag = obj?.httpMetadata?.etag || '"abc123"';
+			// ETag is computed from file content, not stored in httpMetadata
+			const headRequest = t.createAuthRequest('HEAD', '/foo');
+			const headResponse = await executeRequest(headRequest, testEnv);
+			const etag = headResponse.headers.get('ETag') || '"abc123"';
 
 			const request = t.createAuthRequest('GET', '/foo', {
 				headers: { 'If-None-Match': etag }

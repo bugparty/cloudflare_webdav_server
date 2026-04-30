@@ -6,13 +6,12 @@
  * These tests verify the server returns appropriate 405 Method Not Allowed.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, beforeEach } from 'vitest';
 import {
 	WebDAVTest as t,
 	createTestEnv,
 	executeRequest,
-	assertStatus,
-	assertBodyContains
+	assertStatus
 } from './webdav-test-utils';
 
 describe('WebDAV PROPPATCH Requests', () => {

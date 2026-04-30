@@ -8,8 +8,7 @@ import {
 	WebDAVTest as t,
 	createTestEnv,
 	executeRequest,
-	assertStatus,
-	assertHeader
+	assertStatus
 } from './webdav-test-utils';
 
 describe('WebDAV HEAD Requests', () => {

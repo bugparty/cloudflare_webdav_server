@@ -291,10 +291,14 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 			return createResponse('Method Not Allowed: File with same name exists', { status: 405 }, request);
 		}
 
-		// Check whether the parent path exists
-		const parentExists = await checkParentExists(path, this.env.BUCKET);
-		if (!parentExists) {
-			return createResponse('Conflict: Parent does not exist', { status: 409 }, request);
+		// For root-level directories, skip parent check
+		const pathWithoutSlash = path.slice(0, -1);
+		if (pathWithoutSlash.includes('/')) {
+			// Check whether the parent path exists
+			const parentExists = await checkParentExists(path, this.env.BUCKET);
+			if (!parentExists) {
+				return createResponse('Conflict: Parent does not exist', { status: 409 }, request);
+			}
 		}
 
 		console.log(`MKCOL operation: ${path}`);
@@ -321,7 +325,7 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 
 		return createResponse(xml, {
 			status: 207,
-			headers: { 'Content-Type': 'application/xml; charset="utf-8"' }
+			headers: { 'Content-Type': 'application/xml; charset=utf-8' }
 		}, request);
 	}
 

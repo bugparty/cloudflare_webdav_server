@@ -49,11 +49,23 @@ export function createAuthRequest(
 		...options.headers
 	};
 
-	return new Request(url, {
-		method,
+	// Handle invalid HTTP method names by using GET and overriding later
+	const upperMethod = method.toUpperCase();
+	const validMethods = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'CONNECT', 'TRACE', 'MKCOL', 'PROPFIND', 'REPORT', 'MOVE', 'COPY', 'LOCK', 'UNLOCK', 'PROPPATCH'];
+	const validMethod = validMethods.includes(upperMethod) ? upperMethod : 'GET';
+
+	const req = new Request(url, {
+		method: validMethod,
 		headers,
 		body: options.body
 	});
+
+	// Override the method for invalid method names using Object.defineProperty
+	if (validMethod !== upperMethod) {
+		Object.defineProperty(req, 'method', { value: upperMethod, writable: false, configurable: false });
+	}
+
+	return req;
 }
 
 /**

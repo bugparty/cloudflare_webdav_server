@@ -102,10 +102,13 @@ async function validateIfNoneMatch(
  * Check whether the parent path exists.
  */
 async function checkParentExists(path: string, bucket: R2Bucket): Promise<boolean> {
-	const lastSlash = path.lastIndexOf('/');
+	// Remove trailing slash if present
+	const normalizedPath = path.endsWith('/') ? path.slice(0, -1) : path;
+
+	const lastSlash = normalizedPath.lastIndexOf('/');
 	if (lastSlash <= 0) return true; // The root directory always exists.
 
-	const parentPath = path.substring(0, lastSlash);
+	const parentPath = normalizedPath.substring(0, lastSlash);
 	if (!parentPath) return true;
 
 	// Check whether the parent path is a directory
@@ -592,12 +595,18 @@ async function buildPropfindResponse(
 
 	// Render child files
 	for (const obj of list.objects || []) {
+		// Skip the directory itself (it's already added above)
+		if (obj.key === path || obj.key === path + '/') {
+			continue;
+		}
+
 		let relativePath = obj.key;
 		if (path && obj.key.startsWith(path)) {
 			relativePath = obj.key.slice(path.length);
 		}
-		if (!relativePath.includes('/') || relativePath === '') {
-			const href = url.pathname + (relativePath ? relativePath : obj.key);
+		// Only include immediate children (no nested slashes)
+		if (!relativePath.includes('/')) {
+			const href = url.pathname + relativePath;
 			const objMeta: ObjectMetadata = {
 				size: obj.size,
 				httpMetadata: {

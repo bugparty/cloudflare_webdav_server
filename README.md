@@ -4,7 +4,6 @@
 
 A complete WebDAV server implementation for Cloudflare Workers and R2. It is built to work with everyday GUI WebDAV clients on Windows, macOS, and Linux, so you can mount your own private cloud drive without running a server.
 
-Repository: https://github.com/bugparty/cloudflare_webdav_server/tree/master
 
 For small personal workloads, this can run within Cloudflare Workers and R2 free allowances where available. R2 is S3-compatible object storage, and Workers provides the HTTP/WebDAV layer at the edge.
 

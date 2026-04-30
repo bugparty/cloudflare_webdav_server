@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { env } from 'cloudflare:test';
 import {
 	createAuthRequest,
 	createTestEnv,
@@ -7,7 +8,7 @@ import {
 
 describe('request logging', () => {
 	it('persists request logs in D1 and redacts sensitive headers', async () => {
-		const testEnv = createTestEnv();
+		const testEnv = createTestEnv({ DB: env.DB });
 
 		await executeRequest(new Request('http://example.com/_debug/clear-all-logs'), testEnv);
 
@@ -31,7 +32,7 @@ describe('request logging', () => {
 	});
 
 	it('exposes recent Durable Object logs through debug routes', async () => {
-		const testEnv = createTestEnv();
+		const testEnv = createTestEnv({ DB: env.DB, LOG_DO: env.LOG_DO });
 
 		await executeRequest(new Request('http://example.com/_debug/clear-all-logs'), testEnv);
 

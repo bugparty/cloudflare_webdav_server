@@ -14,11 +14,14 @@ describe('WebDAV worker', () => {
 		const ctx = createExecutionContext();
 		const testEnv: Env = {
 			...env,
+			DB: undefined,
+			LOG_DO: undefined,
 			WEBDAV_USERNAME: 'testuser',
 			WEBDAV_PASSWORD: 'testpass'
 		};
 		const response = await testWorker.fetch(request as any, testEnv, ctx);
 		await waitOnExecutionContext(ctx);
+		await response.text();
 		expect(response.status).toBe(401);
 		expect(response.headers.get('WWW-Authenticate')).toBe('Basic realm=""');
 	});
@@ -34,11 +37,14 @@ describe('WebDAV worker', () => {
 		const ctx = createExecutionContext();
 		const testEnv: Env = {
 			...env,
+			DB: undefined,
+			LOG_DO: undefined,
 			WEBDAV_USERNAME: 'testuser',
 			WEBDAV_PASSWORD: 'testpass'
 		};
 		const response = await testWorker.fetch(request as any, testEnv, ctx);
 		await waitOnExecutionContext(ctx);
+		await response.text();
 		expect(response.status).toBe(200);
 		expect(response.headers.get('Allow')).toContain('PROPFIND');
 		expect(response.headers.get('DAV')).toBe('1, 2');
@@ -51,11 +57,14 @@ describe('WebDAV worker', () => {
 		const ctx = createExecutionContext();
 		const testEnv: Env = {
 			...env,
+			DB: undefined,
+			LOG_DO: undefined,
 			WEBDAV_USERNAME: undefined,
 			WEBDAV_PASSWORD: undefined
 		};
 		const response = await testWorker.fetch(request as any, testEnv, ctx);
 		await waitOnExecutionContext(ctx);
+		await response.text();
 		expect(response.status).toBe(200);
 	});
 
@@ -71,11 +80,14 @@ describe('WebDAV worker', () => {
 		const ctx = createExecutionContext();
 		const testEnv: Env = {
 			...env,
+			DB: undefined,
+			LOG_DO: undefined,
 			WEBDAV_USERNAME: 'testuser',
 			WEBDAV_PASSWORD: 'testpass'
 		};
 		const response = await testWorker.fetch(request as any, testEnv, ctx);
 		await waitOnExecutionContext(ctx);
+		await response.text();
 		expect(response.status).toBe(401);
 		expect(response.headers.get('WWW-Authenticate')).toBe('Basic realm=""');
 	});
@@ -90,11 +102,14 @@ describe('WebDAV worker', () => {
 		const ctx = createExecutionContext();
 		const testEnv: Env = {
 			...env,
+			DB: undefined,
+			LOG_DO: undefined,
 			WEBDAV_USERNAME: 'testuser',
 			WEBDAV_PASSWORD: 'testpass'
 		};
 		const response = await testWorker.fetch(request as any, testEnv, ctx);
 		await waitOnExecutionContext(ctx);
+		await response.text();
 		expect(response.status).toBe(401);
 	});
 });

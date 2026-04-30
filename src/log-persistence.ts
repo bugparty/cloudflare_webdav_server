@@ -17,8 +17,6 @@ export interface LogEntry {
 	created_at?: string;
 }
 
-let logTableInitialization: Promise<void> | undefined;
-
 /**
  * Initialize the log table in D1
  */
@@ -51,14 +49,7 @@ export async function initializeLogTable(db: D1Database): Promise<void> {
 }
 
 export async function ensureLogTable(db: D1Database): Promise<void> {
-	if (!logTableInitialization) {
-		logTableInitialization = initializeLogTable(db).catch(error => {
-			logTableInitialization = undefined;
-			throw error;
-		});
-	}
-
-	await logTableInitialization;
+	await initializeLogTable(db);
 }
 
 /**

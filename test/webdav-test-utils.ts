@@ -19,6 +19,8 @@ const testWorker = worker as unknown as {
 export function createTestEnv(overrides: Partial<Env> = {}): Env {
 	return {
 		...env,
+		DB: undefined,
+		LOG_DO: undefined,
 		WEBDAV_USERNAME: 'testuser',
 		WEBDAV_PASSWORD: 'testpass',
 		LOCKS: env.LOCKS || {} as KVNamespace, // Use env.LOCKS if available, otherwise mock
@@ -78,8 +80,22 @@ export async function executeRequest(
 ): Promise<Response> {
 	const ctx = createExecutionContext();
 	const response = await testWorker.fetch(request, testEnv, ctx);
+	const materializedResponse = await materializeResponse(response);
 	await waitOnExecutionContext(ctx);
-	return response;
+	return materializedResponse;
+}
+
+async function materializeResponse(response: Response): Promise<Response> {
+	if (response.body === null) {
+		return response;
+	}
+
+	const body = await response.arrayBuffer();
+	return new Response(body, {
+		status: response.status,
+		statusText: response.statusText,
+		headers: response.headers
+	});
 }
 
 /**

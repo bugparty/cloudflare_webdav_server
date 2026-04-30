@@ -90,10 +90,11 @@ async function logPersistentTargets(
 			const stub = env.LOG_DO.get(id);
 			const timestamp = new Date().toISOString();
 			const logEntry = `${timestamp} - ${request.method} ${path} -> ${response.status}`;
-			await stub.fetch('http://internal/', {
+			const logResponse = await stub.fetch('http://internal/', {
 				method: 'POST',
 				body: logEntry
 			});
+			await logResponse.text();
 		} catch (e) {
 			console.error('Failed to log to Durable Object:', e);
 		}

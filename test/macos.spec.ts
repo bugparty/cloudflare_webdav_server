@@ -6,6 +6,8 @@ import {
 	assertStatus
 } from './webdav-test-utils';
 
+const MACOS_USER_AGENT = 'WebDAVFS/3.0.0 (03008000) Darwin/24.5.0 (arm64)';
+
 describe('WebDAV macOS tests', () => {
 	beforeEach(async () => {
 		await t.clearTestBucket();
@@ -14,7 +16,7 @@ describe('WebDAV macOS tests', () => {
     it('handles macOS WebDAV client OPTIONS request', async () => {
         const request = t.createAuthRequest('OPTIONS', '/', {
             headers: {
-                'User-Agent': 'WebDAVFS/3.0.0 (03008000) Darwin/17.5.0 (x86_64)'
+                'User-Agent': MACOS_USER_AGENT
             }
         });
         const response = await executeRequest(request);
@@ -45,7 +47,7 @@ describe('WebDAV macOS tests', () => {
 
         const request = t.createAuthRequest('PROPFIND', '/.DS_Store', {
             headers: {
-                'User-Agent': 'WebDAVFS/3.0.0 (03008000) Darwin/17.5.0 (x86_64)',
+                'User-Agent': MACOS_USER_AGENT,
                 'Content-Type': 'application/xml; charset=utf-8',
                 'Depth': '0'
             },
@@ -54,14 +56,50 @@ describe('WebDAV macOS tests', () => {
 
         const response = await executeRequest(request);
 
-        // PROPFIND returns 207 Multi-Status even for non-existent resources
-        assertStatus(207, response);
+        assertStatus(404, response);
+    });
 
-        // verify response headers
-        expect(response.headers.get('Content-Type')).toBe('application/xml; charset=utf-8');
+    it('treats macOS cleanup DELETE for missing AppleDouble files as successful', async () => {
+        const request = t.createAuthRequest('DELETE', '/._logo_blogger_40px_2x.png', {
+            headers: {
+                'User-Agent': MACOS_USER_AGENT
+            }
+        });
+        const response = await executeRequest(request);
 
-        // verify response body contains WebDAV XML
-        const responseText = await response.text();
-        expect(responseText).toContain('multistatus');
+        assertStatus(204, response);
+    });
+
+    it('keeps standard DELETE semantics for missing files from other clients', async () => {
+        const request = t.createAuthRequest('DELETE', '/._logo_blogger_40px_2x.png');
+        const response = await executeRequest(request);
+
+        assertStatus(404, response);
+    });
+
+    it('supports the Finder replace sequence when sidecar cleanup targets are absent', async () => {
+        const testEnv = createTestEnv();
+        await t.createTestFile('logo_blogger_40px_2x.png', 'old image', 'image/png', testEnv);
+
+        const sidecarDelete = t.createAuthRequest('DELETE', '/._logo_blogger_40px_2x.png', {
+            headers: {
+                'User-Agent': MACOS_USER_AGENT
+            }
+        });
+        const sidecarDeleteResponse = await executeRequest(sidecarDelete, testEnv);
+        assertStatus(204, sidecarDeleteResponse);
+
+        const replace = t.createAuthRequest('PUT', '/logo_blogger_40px_2x.png', {
+            headers: {
+                'User-Agent': MACOS_USER_AGENT,
+                'Content-Type': 'image/png'
+            },
+            body: 'new image'
+        });
+        const replaceResponse = await executeRequest(replace, testEnv);
+        assertStatus(204, replaceResponse);
+
+        const content = await t.getFileContent('logo_blogger_40px_2x.png', testEnv);
+        expect(content).toBe('new image');
     });
 });

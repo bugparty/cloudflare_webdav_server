@@ -1,5 +1,5 @@
 import { WebDAVDelegate, Env, ObjectMetadata } from './types';
-import { createResponse, addMacOSCompatibilityHeaders } from './macos';
+import { createResponse, addMacOSCompatibilityHeaders, isMacOSWebDAVClient } from './macos';
 import { logWriteOperation, logHttpInteraction } from './logger';
 import {
 	getLock,
@@ -775,6 +775,11 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 		// Check whether the resource exists (file or directory)
 		const resourceInfo = await getResourceInfo(path, this.env.BUCKET);
 		if (!resourceInfo) {
+			// Finder cleans up AppleDouble sidecar files during replace flows and expects
+			// missing cleanup targets to behave like successful idempotent deletes.
+			if (isMacOSWebDAVClient(request.headers.get('user-agent') || '')) {
+				return createResponse(null, { status: 204 }, request);
+			}
 			return createResponse('Not Found', { status: 404 }, request);
 		}
 
@@ -1047,11 +1052,11 @@ async function buildPropfindResponse(
 	const responses: string[] = [];
 	const resource = await getResourceInfo(path, env.BUCKET);
 
-	// If resource doesn't exist but parent exists, return 404
-	// If the parent doesn't exist either, return empty multistatus (for root paths)
+	// If the resource doesn't exist but the parent collection does, return 404.
+	// If the parent doesn't exist either, return an empty multistatus.
 	if (!resource) {
 		// Check if parent exists
-		const parentPath = path.split('/').slice(0, -1).join('/') || '/';
+		const parentPath = path.includes('/') ? path.split('/').slice(0, -1).join('/') : '';
 		const parentResource = await getResourceInfo(parentPath, env.BUCKET);
 		if (parentResource && parentResource.isCollection) {
 			// Parent exists but this resource doesn't - return null to trigger 404

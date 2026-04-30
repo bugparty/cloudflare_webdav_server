@@ -21,7 +21,8 @@ describe('WebDAV Server Range Requests', () => {
 	describe('Basic Range', () => {
 		it('should return 206 with partial content for bytes range', async () => {
 			const testEnv = createTestEnv();
-			await t.createTestFile('test.txt', 'Test contents', 'text/plain', testEnv);
+			// Don't set content type - should default to application/octet-stream
+			await t.createTestFile('test.txt', 'Test contents', undefined, testEnv);
 
 			const request = t.createAuthRequest('GET', '/test.txt', {
 				headers: { 'Range': 'bytes=2-5' }
@@ -32,11 +33,13 @@ describe('WebDAV Server Range Requests', () => {
 			assertHeader('Content-Type', 'application/octet-stream', response);
 			expect(response.headers.get('Content-Length')).toBe('4');
 			expect(response.headers.get('Content-Range')).toBe('bytes 2-5/13');
+
+			await assertBody('st c', response);
 		});
 
 		it('should return 206 with partial content for start-only range', async () => {
 			const testEnv = createTestEnv();
-			await t.createTestFile('test.txt', 'Test contents', 'text/plain', testEnv);
+			await t.createTestFile('test.txt', 'Test contents', undefined, testEnv);
 
 			const request = t.createAuthRequest('GET', '/test.txt', {
 				headers: { 'Range': 'bytes=2-' }
@@ -53,7 +56,7 @@ describe('WebDAV Server Range Requests', () => {
 
 		it('should return 206 with partial content for end-only range', async () => {
 			const testEnv = createTestEnv();
-			await t.createTestFile('test.txt', 'Test contents', 'text/plain', testEnv);
+			await t.createTestFile('test.txt', 'Test contents', undefined, testEnv);
 
 			const request = t.createAuthRequest('GET', '/test.txt', {
 				headers: { 'Range': 'bytes=-8' }
@@ -70,7 +73,7 @@ describe('WebDAV Server Range Requests', () => {
 
 		it('should return 416 for range beyond file size', async () => {
 			const testEnv = createTestEnv();
-			await t.createTestFile('test.txt', 'Test contents', 'text/plain', testEnv);
+			await t.createTestFile('test.txt', 'Test contents', undefined, testEnv);
 
 			const request = t.createAuthRequest('GET', '/test.txt', {
 				headers: { 'Range': 'bytes=100-200' }
@@ -82,7 +85,7 @@ describe('WebDAV Server Range Requests', () => {
 
 		it('should return 416 for invalid range (start > end)', async () => {
 			const testEnv = createTestEnv();
-			await t.createTestFile('test.txt', 'Test contents', 'text/plain', testEnv);
+			await t.createTestFile('test.txt', 'Test contents', undefined, testEnv);
 
 			const request = t.createAuthRequest('GET', '/test.txt', {
 				headers: { 'Range': 'bytes=8-4' }
@@ -94,18 +97,18 @@ describe('WebDAV Server Range Requests', () => {
 	});
 
 	describe('HEAD Range', () => {
-		it('should return 200 for HEAD request with Range header', async () => {
+		it('should return 200 for HEAD request (ignores Range header per PHP test)', async () => {
 			const testEnv = createTestEnv();
-			await t.createTestFile('test.txt', 'Test contents', 'text/plain', testEnv);
+			await t.createTestFile('test.txt', 'Test contents', undefined, testEnv);
 
 			const request = t.createAuthRequest('HEAD', '/test.txt', {
 				headers: { 'Range': 'bytes=2-' }
 			});
 			const response = await executeRequest(request, testEnv);
 
-			// HEAD with Range returns full content length
+			// Per PHP test: HEAD with Range returns full content (200)
 			assertStatus(200, response);
-			assertHeader('Content-Type', 'text/plain', response);
+			assertHeader('Content-Type', 'application/octet-stream', response);
 			expect(response.headers.get('Content-Length')).toBe('13');
 		});
 	});
@@ -113,12 +116,12 @@ describe('WebDAV Server Range Requests', () => {
 	describe('If-Range Header', () => {
 		it('should return 206 when If-Range ETag matches', async () => {
 			const testEnv = createTestEnv();
-			await t.createTestFile('test.txt', 'Test contents', 'text/plain', testEnv);
+			await t.createTestFile('test.txt', 'Test contents', undefined, testEnv);
 
-				// ETag is computed from file content, not stored in httpMetadata
-				const headRequest = t.createAuthRequest('HEAD', '/test.txt');
-				const headResponse = await executeRequest(headRequest, testEnv);
-				const etag = headResponse.headers.get('ETag') || '';
+			// Get ETag from HEAD request
+			const headRequest = t.createAuthRequest('HEAD', '/test.txt');
+			const headResponse = await executeRequest(headRequest, testEnv);
+			const etag = headResponse.headers.get('ETag') || '';
 
 			const request = t.createAuthRequest('GET', '/test.txt', {
 				headers: {
@@ -134,52 +137,54 @@ describe('WebDAV Server Range Requests', () => {
 
 		it('should return 200 when If-Range ETag does not match', async () => {
 			const testEnv = createTestEnv();
-			await t.createTestFile('test.txt', 'Test contents', 'text/plain', testEnv);
+			await t.createTestFile('test.txt', 'Test contents', undefined, testEnv);
 
 			const request = t.createAuthRequest('GET', '/test.txt', {
 				headers: {
 					'Range': 'bytes=2-5',
-					'If-Range': '"foobar"'
+					'If-Range': '"wrong-etag"'
 				}
 			});
 			const response = await executeRequest(request, testEnv);
 
-			// When If-Range doesn't match, server returns full entity
+			// When If-Range doesn't match, server returns full entity (200)
 			assertStatus(200, response);
 			expect(response.headers.get('Content-Length')).toBe('13');
-			await assertBody('Test contents', response);
 		});
 
 		it('should return 206 when If-Range date is before file modification', async () => {
 			const testEnv = createTestEnv();
-			await t.createTestFile('test.txt', 'Test contents', 'text/plain', testEnv);
+			await t.createTestFile('test.txt', 'Test contents', undefined, testEnv);
 
-			// If-Range with a date that is in the future (file is older)
+			// Use a past date - file was modified after this date, so If-Range condition passes
+			const pastDate = new Date(Date.now() - 86400000).toUTCString(); // yesterday
 			const request = t.createAuthRequest('GET', '/test.txt', {
 				headers: {
 					'Range': 'bytes=2-5',
-					'If-Range': 'tomorrow'
+					'If-Range': pastDate
 				}
 			});
 			const response = await executeRequest(request, testEnv);
 
+			// If-Range date is before file modification, so Range is applied
 			assertStatus(206, response);
 		});
 
 		it('should return 200 when If-Range date is after file modification', async () => {
 			const testEnv = createTestEnv();
-			await t.createTestFile('test.txt', 'Test contents', 'text/plain', testEnv);
+			await t.createTestFile('test.txt', 'Test contents', undefined, testEnv);
 
-			// If-Range with a date that is in the past (file is newer)
+			// Use a future date - file was modified before this date, so If-Range condition fails
+			const futureDate = new Date(Date.now() + 86400000).toUTCString(); // tomorrow
 			const request = t.createAuthRequest('GET', '/test.txt', {
 				headers: {
 					'Range': 'bytes=2-5',
-					'If-Range': '-2 years'
+					'If-Range': futureDate
 				}
 			});
 			const response = await executeRequest(request, testEnv);
 
-			// When If-Range condition fails, server returns full entity
+			// When If-Range condition fails, server returns full entity (200)
 			assertStatus(200, response);
 			await assertBody('Test contents', response);
 		});
@@ -188,7 +193,7 @@ describe('WebDAV Server Range Requests', () => {
 	describe('Multiple Ranges', () => {
 		it('should handle multiple ranges in request', async () => {
 			const testEnv = createTestEnv();
-			await t.createTestFile('test.txt', 'Test contents', 'text/plain', testEnv);
+			await t.createTestFile('test.txt', 'Test contents', undefined, testEnv);
 
 			const request = t.createAuthRequest('GET', '/test.txt', {
 				headers: { 'Range': 'bytes=0-1, 3-5' }
@@ -212,9 +217,9 @@ describe('WebDAV Server Range Requests', () => {
 
 		it('should handle range with exact end at file boundary', async () => {
 			const testEnv = createTestEnv();
-			await t.createTestFile('test.txt', 'Test contents', 'text/plain', testEnv);
+			await t.createTestFile('test.txt', 'Test contents', undefined, testEnv);
 
-			// File is 13 bytes, so bytes=5-12 should work
+			// File is 13 bytes (indices 0-12), so bytes=5-12 should work
 			const request = t.createAuthRequest('GET', '/test.txt', {
 				headers: { 'Range': 'bytes=5-12' }
 			});

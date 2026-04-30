@@ -137,12 +137,20 @@ export async function deleteTestFile(
 }
 
 /**
- * Check whether a file exists.
+ * Check whether a file or directory exists.
  */
 export async function fileExists(
 	path: string,
 	testEnv: Env = createTestEnv()
 ): Promise<boolean> {
+	// Check if it's a directory (ends with /)
+	if (path.endsWith('/')) {
+		const prefix = path.replace(/\/+$/, '');
+		const list = await testEnv.BUCKET.list({ prefix: prefix + '/', limit: 1 });
+		// Directory exists if there's at least one object with this prefix
+		return list.objects.length > 0;
+	}
+	// Check for file
 	const obj = await testEnv.BUCKET.get(path);
 	return obj !== null;
 }

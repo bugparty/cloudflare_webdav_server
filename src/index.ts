@@ -1,4 +1,4 @@
-import { WebDAVDelegate, Env, ObjectMetadata} from './types';
+import { WebDAVDelegate, Env, ObjectMetadata } from './types';
 import { logWriteOperation, logHttpInteraction, handleDebugRoutes } from './logger';
 import {
 	isMacOSWebDAVClient,
@@ -8,35 +8,57 @@ import {
 	handleMacOSOptionsRequest
 } from './macos';
 import { WebDAVDelegateImpl } from './webdav-delegate';
-import { a } from 'vitest/dist/chunks/suite.d.FvehnV49.js';
-// 主要的请求处理函数
+
+/**
+ * Normalize a path by collapsing duplicate slashes and removing the leading slash.
+ */
+function normalizePath(pathname: string): string {
+	return pathname.replace(/\/+/g, '/').replace(/^\//, '');
+}
+
+/**
+ * Check whether the parent path exists.
+ */
+async function checkParentExists(path: string, bucket: R2Bucket): Promise<boolean> {
+	const lastSlash = path.lastIndexOf('/');
+	if (lastSlash <= 0) return true;
+	const parentPath = path.substring(0, lastSlash);
+	if (!parentPath) return true;
+	const parentDir = await bucket.get(parentPath + '/');
+	if (parentDir) return true;
+	const parentFile = await bucket.get(parentPath);
+	if (parentFile) return false;
+	return false;
+}
+
+	// Main request handler
 async function handleWebDAVRequest(request: Request, env: Env): Promise<Response> {
 	const userAgent = request.headers.get('user-agent') || '';
 	const isMacOS = isMacOSWebDAVClient(userAgent);
 	let davDelegate = new WebDAVDelegateImpl();
 	davDelegate.init(env);
 
-	// 处理调试路由
+	// Handle debug routes
 	const debugResponse = handleDebugRoutes(request);
 	if (debugResponse) {
 		return debugResponse;
 	}
-	// macOS兼容性：对于OPTIONS请求，先处理再进行认证
-	if (isMacOS && (request.method === 'OPTIONS') ) {
-		const optionsResponse = handleMacOSOptionsRequest(request, davDelegate);
+
+	// macOS compatibility: handle OPTIONS requests before authentication
+	if (isMacOS && request.method === 'OPTIONS') {
+		const optionsResponse = await handleMacOSOptionsRequest(request, davDelegate);
 		if (optionsResponse) {
 			return optionsResponse;
 		}
 	}
 
-	// 验证身份 - 现在严格要求认证
+	// Authenticate the request
 	if (!authenticateRequest(request, env)) {
 		return unauthorizedResponse(request);
 	}
 
 	const url = new URL(request.url);
-	// 去掉前缀 route，不同部署时可能要 trim
-	let path = url.pathname.replace(/^\/?/, '');
+	let path = normalizePath(url.pathname);
 
 	switch (request.method) {
 		case 'GET':
@@ -54,91 +76,73 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 			return await davDelegate.onMkcol(request);
 		case 'MOVE':
 		case 'COPY':
-			// 从 Destination 头解析目标路径 - 添加详细日志
+			// Parse the target path from the Destination header
 			const destination = request.headers.get('Destination');
 			if (!destination) {
-				const errorInfo = `${request.method} Operation Details:\n- Error: Missing Destination header`;
-				const response = createResponse('Bad Request: Missing Destination header', { status: 400 }, request);
-				logHttpInteraction(request, response, errorInfo);
-				return response;
+				return createResponse('Bad Request: Missing Destination header', { status: 400 }, request);
 			}
 
-			const dest = new URL(destination).pathname.replace(/^\//, '');
+			// Normalize the destination path
+			let dest = normalizePath(new URL(destination).pathname);
 
-			const moveInfo = [
-				`${request.method} Operation Details:`,
-				`- Source path: ${path}`,
-				`- Destination path: ${dest}`,
-				`- Operation: ${request.method === 'MOVE' ? 'Move file' : 'Copy file'}`,
-				`- Timestamp: ${new Date().toISOString()}`
-			];
+			// Reject moves/copies to the same path
+			if (path === dest || path + '/' === dest || path === dest + '/') {
+				return createResponse('Forbidden: Cannot move/copy to self', { status: 403 }, request);
+			}
 
-			const moveOperationDetails: any = {
-				operation: request.method,
-				sourcePath: path,
-				destinationPath: dest,
-				timestamp: new Date().toISOString()
-			};
+			// Read the Overwrite header
+			const overwrite = request.headers.get('Overwrite');
 
 			try {
-				// COPY: 先读后写；MOVE: 写完再删
+				// Fetch the source object
 				const sourceObj = await env.BUCKET.get(path);
 				if (!sourceObj) {
-					moveOperationDetails.result = 'FAILED';
-					moveOperationDetails.error = 'Source file not found';
-					logWriteOperation(request.method, path, moveOperationDetails);
-
-					const notFoundInfo = moveInfo.join('\n') + '\n- Result: FAILED - Source file not found';
-					const response = createResponse('Not Found', { status: 404 }, request);
-					logHttpInteraction(request, response, notFoundInfo);
-					return response;
+					return createResponse('Not Found', { status: 404 }, request);
 				}
 
-				moveInfo.push(`- Source file size: ${sourceObj.size} bytes`);
-				moveInfo.push(`- Source content-type: ${sourceObj.httpMetadata?.contentType || 'unknown'}`);
-				moveOperationDetails.sourceSize = sourceObj.size;
-				moveOperationDetails.sourceContentType = sourceObj.httpMetadata?.contentType || 'unknown';
+				// Check whether the destination already exists
+				const destExists = await env.BUCKET.get(dest);
+				if (destExists) {
+					if (overwrite === 'F') {
+						return createResponse('Precondition Failed: Destination exists and Overwrite is F', { status: 412 }, request);
+					}
+					// Overwrite: T or default, allow replacement
+				}
 
+				// Check whether the destination parent path exists
+				const parentExists = await checkParentExists(dest, env.BUCKET);
+				if (!parentExists) {
+					return createResponse('Conflict: Destination parent does not exist', { status: 409 }, request);
+				}
+
+				// Perform the copy
 				await env.BUCKET.put(dest, sourceObj.body, { httpMetadata: sourceObj.httpMetadata });
 
+				// Delete the source object for MOVE
 				if (request.method === 'MOVE') {
 					await env.BUCKET.delete(path);
-					moveInfo.push('- Source file deleted after move');
-					moveOperationDetails.sourceDeleted = true;
 				}
 
-				moveOperationDetails.result = 'SUCCESS';
-				moveOperationDetails.message = 'File operation completed';
-				logWriteOperation(request.method, path, moveOperationDetails);
+				console.log(`${request.method}: ${path} -> ${dest}`);
+				logWriteOperation(request.method, path, { sourcePath: path, destPath: dest, result: 'SUCCESS' });
 
-				const successInfo = moveInfo.join('\n') + '\n- Result: SUCCESS - File operation completed';
-				console.log(`${request.method} operation:`, successInfo);
-				const response = createResponse(null, { status: 201 }, request);
-				// 记录成功的移动/复制操作
-				logHttpInteraction(request, response, successInfo);
-				return response;
+				// Return 204 for overwrite, 201 for a new resource
+				const statusCode = destExists ? 204 : 201;
+				return createResponse(null, { status: statusCode }, request);
 			} catch (error) {
-				moveOperationDetails.result = 'FAILED';
-				moveOperationDetails.error = String(error);
-				logWriteOperation(request.method, path, moveOperationDetails);
-
-				const errorInfo = moveInfo.join('\n') + `\n- Result: FAILED - ${error}`;
 				console.error(`${request.method} operation failed:`, error);
-				const response = createResponse('Internal Server Error', { status: 500 }, request);
-				// 记录失败的移动/复制操作
-				logHttpInteraction(request, response, errorInfo);
-				return response;
+				return createResponse('Internal Server Error', { status: 500 }, request);
 			}
 
 		default:
 			return createResponse('Method Not Allowed', { status: 405 }, request);
 	}
 }
+
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		let response: Response;
 		let additionalInfo: string | undefined;
-
 
 		try {
 			response = await handleWebDAVRequest(request, env);
@@ -148,8 +152,7 @@ export default {
 			additionalInfo = `Server Error: ${error}`;
 		}
 
-		// 记录HTTP交互日志 - 但要避免重复记录
-		// 因为PUT/DELETE等操作已经在内部记录了，这里只记录其他操作
+		// Record HTTP interaction logs, but avoid duplicate entries
 		const method = request.method;
 		const url = new URL(request.url);
 		const isDebugRoute = url.pathname === '/_debug/http-log';
@@ -162,4 +165,3 @@ export default {
 		return response;
 	}
 } as ExportedHandler<Env>;
-

@@ -1,10 +1,10 @@
-// HTTP调试日志
+// HTTP debug log
 let httpLogBuffer: string[] = [];
 let writeOperationLog: string[] = [];
 export const MAX_LOG_ENTRIES = 100;
 export const MAX_WRITE_LOG_ENTRIES = 50;
 
-// 获取日志状态
+// Get log status
 export function getLogStatus() {
 	return {
 		httpLogEntries: httpLogBuffer.length,
@@ -14,7 +14,7 @@ export function getLogStatus() {
 	};
 }
 
-// 记录写入操作的详细日志
+// Record detailed logs for write operations
 export function logWriteOperation(operation: string, path: string, details: any): void {
 	const timestamp = new Date().toISOString();
 	const logEntry = `=== ${timestamp} - ${operation} ===\n` +
@@ -24,7 +24,7 @@ export function logWriteOperation(operation: string, path: string, details: any)
 
 	writeOperationLog.push(logEntry);
 
-	// 保持缓冲区大小
+	// Keep the buffer size under control
 	if (writeOperationLog.length > MAX_WRITE_LOG_ENTRIES) {
 		writeOperationLog = writeOperationLog.slice(-MAX_WRITE_LOG_ENTRIES);
 	}
@@ -32,22 +32,22 @@ export function logWriteOperation(operation: string, path: string, details: any)
 	console.log(`Write operation logged: ${operation} on ${path}`);
 }
 
-// 获取写入操作日志
+// Get the write operation log
 export function getWriteOperationLog(): string {
 	return writeOperationLog.join('');
 }
 
-// 清空写入操作日志
+// Clear the write operation log
 export function clearWriteOperationLog(): void {
 	writeOperationLog = [];
 }
 
-// 格式化HTTP请求日志
+// Format HTTP request logs
 function formatHttpRequest(request: Request, bodyInfo?: string): string {
 	const url = new URL(request.url);
 	const lines: string[] = [];
 
-	// 请求行
+	// Request line
 	lines.push(`${request.method} ${url.pathname}${url.search} HTTP/1.1`);
 
 	// Headers
@@ -58,7 +58,7 @@ function formatHttpRequest(request: Request, bodyInfo?: string): string {
 		}
 	});
 
-	// 如果有body信息，添加到请求日志中
+	// Append body information when present
 	if (bodyInfo) {
 		lines.push('');
 		lines.push(bodyInfo);
@@ -67,11 +67,11 @@ function formatHttpRequest(request: Request, bodyInfo?: string): string {
 	return lines.join('\n') + '\n\n';
 }
 
-// 格式化HTTP响应日志
+// Format HTTP response logs
 function formatHttpResponse(response: Response): string {
 	const lines: string[] = [];
 
-	// 状态行
+	// Status line
 	lines.push(`HTTP/1.1 ${response.status} ${response.statusText}`);
 
 	// Headers
@@ -82,7 +82,7 @@ function formatHttpResponse(response: Response): string {
 	return lines.join('\n') + '\n\n';
 }
 
-// 记录HTTP交互到缓冲区
+// Record HTTP interactions in the buffer
 export function logHttpInteraction(request: Request, response: Response, additionalInfo?: string): void {
 	const timestamp = new Date().toISOString();
 	const url = new URL(request.url);
@@ -93,34 +93,34 @@ export function logHttpInteraction(request: Request, response: Response, additio
 
 	httpLogBuffer.push(logEntry);
 
-	// 保持缓冲区大小
+	// Keep the buffer size under control
 	if (httpLogBuffer.length > MAX_LOG_ENTRIES) {
 		httpLogBuffer = httpLogBuffer.slice(-MAX_LOG_ENTRIES);
 	}
 
-	// 输出到控制台用于实时调试
+	// Print to the console for live debugging
 	console.log(`HTTP ${request.method} ${url.pathname} → ${response.status}`);
 	if (additionalInfo) {
 		console.log('Additional info:', additionalInfo);
 	}
 }
 
-// 获取完整的HTTP日志
+// Get the full HTTP log
 export function getHttpLog(): string {
 	return httpLogBuffer.join('');
 }
 
-// 清空HTTP日志
+// Clear the HTTP log
 export function clearHttpLog(): void {
 	httpLogBuffer = [];
 }
-// 处理调试路由
+// Handle debug routes
 export function handleDebugRoutes(request: Request): Response | null {
 	const url = new URL(request.url);
 	const pathname = url.pathname;
 	const method = request.method;
 
-	// 调试面板（提供所有调试功能的链接）
+	// Debug panel with links to all debug features
 	if (method === 'GET' && pathname === '/_debug') {
 		const logStatus = getLogStatus();
 		const debugPanel = `
@@ -172,7 +172,7 @@ Log Status:
 		});
 	}
 
-	// HTTP日志相关路由
+	// HTTP log routes
 	if (pathname === '/_debug/http-log') {
 		if (method === 'GET') {
 			return new Response(getHttpLog(), {
@@ -186,7 +186,7 @@ Log Status:
 		}
 	}
 
-	// 写入操作日志相关路由
+	// Write operation log routes
 	if (pathname === '/_debug/write-log') {
 		if (method === 'GET') {
 			return new Response(getWriteOperationLog(), {
@@ -200,7 +200,7 @@ Log Status:
 		}
 	}
 
-	// 所有日志相关路由
+	// All log routes
 	if (pathname === '/_debug/all-logs') {
 		if (method === 'GET') {
 			const allLogs = '=== HTTP LOGS ===\n\n' + getHttpLog() +
@@ -217,7 +217,7 @@ Log Status:
 		}
 	}
 
-	// 通过GET请求清空日志（方便在浏览器中操作）
+	// Clear logs via GET for convenience in the browser
 	if (method === 'GET' && pathname === '/_debug/clear-http-log') {
 		clearHttpLog();
 		return new Response('HTTP log cleared successfully!\n\nYou can now go back to view the logs.', {
@@ -241,6 +241,6 @@ Log Status:
 		});
 	}
 
-	// 如果没有匹配的调试路由，返回null
+	// Return null if no debug route matches
 	return null;
 }

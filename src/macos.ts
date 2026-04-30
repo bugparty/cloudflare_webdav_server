@@ -1,14 +1,14 @@
 import { Env,WebDAVDelegate } from './types';
-// macOS WebDAV客户端兼容性处理 (基于rclone的实现)
+// macOS WebDAV client compatibility handling (based on rclone)
 const macOSSessionCache = new Map<string, number>();
-const SESSION_TIMEOUT = 300000; // 5分钟
+const SESSION_TIMEOUT = 300000; // 5 minutes
 
-// 检测是否是macOS WebDAV客户端
+// Detect whether this is a macOS WebDAV client
 export function isMacOSWebDAVClient(userAgent: string): boolean {
 	return /WebDAVFS|Darwin.*WebDAV|WebDAVLib/i.test(userAgent || '');
 }
 
-// 获取macOS会话标识
+// Get the macOS session key
 export function getMacOSSessionKey(request: Request): string {
 	const ip = request.headers.get('cf-connecting-ip') ||
 	          request.headers.get('x-forwarded-for') ||
@@ -17,12 +17,12 @@ export function getMacOSSessionKey(request: Request): string {
 	return `${ip}:${userAgent}`;
 }
 
-// 检查macOS会话缓存
+// Check the macOS session cache
 export function checkMacOSSession(sessionKey: string): boolean {
 	const sessionTime = macOSSessionCache.get(sessionKey);
 	const now = Date.now();
 
-	// 清理过期的会话
+	// Remove expired sessions
 	for (const [key, time] of macOSSessionCache.entries()) {
 		if (now - time > SESSION_TIMEOUT) {
 			macOSSessionCache.delete(key);
@@ -35,12 +35,12 @@ export function checkMacOSSession(sessionKey: string): boolean {
 	return false;
 }
 
-// 设置macOS会话
+// Set the macOS session
 export function setMacOSSession(sessionKey: string): void {
 	macOSSessionCache.set(sessionKey, Date.now());
 }
 
-// 为macOS客户端添加兼容性响应头 (参考rclone实现)
+// Add compatibility headers for macOS clients (based on rclone)
 export function addMacOSCompatibilityHeaders(headers: Headers): void {
 	headers.set('Ms-Author-Via', 'DAV');
 	headers.set('DAV', '1, 2');
@@ -48,7 +48,7 @@ export function addMacOSCompatibilityHeaders(headers: Headers): void {
 	headers.set('Accept-Ranges', 'bytes');
 }
 
-// 创建兼容macOS的响应
+// Create a response compatible with macOS clients
 export function createResponse(body: BodyInit | null, init: ResponseInit, request: Request): Response {
 	const response = new Response(body, init);
 	const userAgent = request.headers.get('user-agent') || '';
@@ -60,7 +60,7 @@ export function createResponse(body: BodyInit | null, init: ResponseInit, reques
 	return response;
 }
 
-// 返回401未授权响应
+// Return a 401 unauthorized response
 export function unauthorizedResponse(request: Request): Response {
 	const now = new Date();
 	const formattedNow = now.toISOString();
@@ -82,9 +82,9 @@ export function unauthorizedResponse(request: Request): Response {
 	return response;
 }
 
-// Basic Auth验证函数 (安全的macOS兼容性处理)
+// Basic Auth validation function (safe macOS compatibility handling)
 export function authenticateRequest(request: Request, env: Env): boolean {
-	// 如果环境变量中没有设置用户名和密码，则允许所有请求（向后兼容）
+	// If username and password are not set in the environment, allow all requests for backward compatibility
 	if (!env.WEBDAV_USERNAME || !env.WEBDAV_PASSWORD) {
 		return true;
 	}
@@ -119,7 +119,7 @@ export function authenticateRequest(request: Request, env: Env): boolean {
 
 	let [username, password] = credentials.split(':');
 
-	// 检查是否是macOS发送的无效默认凭据
+	// Check whether these are the invalid default credentials sent by macOS
 	if (credentials.startsWith('No user accoun')) {
 		console.log('Detected macOS invalid default credentials, rejecting');
 		return false;
@@ -140,8 +140,8 @@ export function authenticateRequest(request: Request, env: Env): boolean {
 	return isValid;
 }
 
-// 处理macOS OPTIONS请求
-export async function handleMacOSOptionsRequest(request: Request, davDelegate: WebDAVDelegate): Response | null {
+// Handle macOS OPTIONS requests
+export async function handleMacOSOptionsRequest(request: Request, davDelegate: WebDAVDelegate): Promise<Response | null> {
 
 
 	if (request.method === 'OPTIONS' ) {

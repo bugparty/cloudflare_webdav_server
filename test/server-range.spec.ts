@@ -152,34 +152,35 @@ describe('WebDAV Server Range Requests', () => {
 			expect(response.headers.get('Content-Length')).toBe('13');
 		});
 
-		it('should return 206 when If-Range date is before file modification', async () => {
+		it('should return 206 when If-Range date is after (or same as) file modification date', async () => {
 			const testEnv = createTestEnv();
 			await t.createTestFile('test.txt', 'Test contents', undefined, testEnv);
 
-			// Use a past date - file was modified after this date, so If-Range condition passes
-			const pastDate = new Date(Date.now() - 86400000).toUTCString(); // yesterday
-			const request = t.createAuthRequest('GET', '/test.txt', {
-				headers: {
-					'Range': 'bytes=2-5',
-					'If-Range': pastDate
-				}
-			});
-			const response = await executeRequest(request, testEnv);
-
-			// If-Range date is before file modification, so Range is applied
-			assertStatus(206, response);
-		});
-
-		it('should return 200 when If-Range date is after file modification', async () => {
-			const testEnv = createTestEnv();
-			await t.createTestFile('test.txt', 'Test contents', undefined, testEnv);
-
-			// Use a future date - file was modified before this date, so If-Range condition fails
+			// Per PHP test: If-Range: "tomorrow" → 206 (client has newer version, range is valid)
 			const futureDate = new Date(Date.now() + 86400000).toUTCString(); // tomorrow
 			const request = t.createAuthRequest('GET', '/test.txt', {
 				headers: {
 					'Range': 'bytes=2-5',
 					'If-Range': futureDate
+				}
+			});
+			const response = await executeRequest(request, testEnv);
+
+			// If-Range date >= Last-Modified → range is valid → 206
+			assertStatus(206, response);
+		});
+
+		it('should return 200 when If-Range date is before file modification date', async () => {
+			const testEnv = createTestEnv();
+			await t.createTestFile('test.txt', 'Test contents', undefined, testEnv);
+
+			// Per PHP test: If-Range: "-2 years" → 200 (client has older version, return full)
+			// Use a date 2 years ago
+			const pastDate = new Date(Date.now() - 2 * 365 * 86400000).toUTCString();
+			const request = t.createAuthRequest('GET', '/test.txt', {
+				headers: {
+					'Range': 'bytes=2-5',
+					'If-Range': pastDate
 				}
 			});
 			const response = await executeRequest(request, testEnv);

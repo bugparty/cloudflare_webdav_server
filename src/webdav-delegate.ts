@@ -151,43 +151,38 @@ async function getResourceInfo(path: string, bucket: R2Bucket): Promise<Resource
 }
 
 /**
- * Generate a content-based ETag.
+ * Format an R2 object's native etag as a quoted ETag string.
+ * R2 provides an MD5-based etag for single-part uploads.
  */
-async function generateETag(content: ArrayBuffer | string): Promise<string> {
-	// Use the Web Crypto API to generate a SHA-1 hash
-	const data = typeof content === 'string' ? new TextEncoder().encode(content) : new Uint8Array(content);
-	const hashBuffer = await crypto.subtle.digest('SHA-1', data);
-	const hashArray = Array.from(new Uint8Array(hashBuffer));
-	const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-	return `"${hashHex}"`;
+function formatETag(etag: string): string {
+	return '"' + etag + '"';
 }
 
 /**
  * Validate the If-Match condition.
  */
-async function validateIfMatch(
+function validateIfMatch(
 	ifMatch: string | null,
-	existingObj: R2ObjectBody | null
-): Promise<{ valid: boolean; status?: number }> {
+	exists: boolean,
+	etag: string
+): { valid: boolean; status?: number } {
 	if (!ifMatch) return { valid: true };
 
 	// If-Match: * means the resource must exist
 	if (ifMatch === '*') {
-		if (!existingObj) {
+		if (!exists) {
 			return { valid: false, status: 412 }; // Precondition Failed
 		}
 		return { valid: true };
 	}
 
 	// If-Match: "etag1", "etag2" - one of them must match
-	if (!existingObj) {
+	if (!exists) {
 		return { valid: false, status: 412 };
 	}
 
 	const etags = ifMatch.split(',').map(e => e.trim().replace(/"/g, ''));
-	const content = await existingObj.arrayBuffer();
-	const currentEtag = await generateETag(content);
-	const currentEtagClean = currentEtag.replace(/"/g, '');
+	const currentEtagClean = etag.replace(/"/g, '');
 
 	if (!etags.includes(currentEtagClean)) {
 		return { valid: false, status: 412 };
@@ -199,29 +194,28 @@ async function validateIfMatch(
 /**
  * Validate the If-None-Match condition.
  */
-async function validateIfNoneMatch(
+function validateIfNoneMatch(
 	ifNoneMatch: string | null,
-	existingObj: R2ObjectBody | null
-): Promise<{ valid: boolean; status?: number }> {
+	exists: boolean,
+	etag: string
+): { valid: boolean; status?: number } {
 	if (!ifNoneMatch) return { valid: true };
 
 	// If-None-Match: * means the resource must not exist
 	if (ifNoneMatch === '*') {
-		if (existingObj) {
+		if (exists) {
 			return { valid: false, status: 412 }; // Precondition Failed
 		}
 		return { valid: true };
 	}
 
 	// If-None-Match: "etag1", "etag2" - none of them may match
-	if (!existingObj) {
+	if (!exists) {
 		return { valid: true };
 	}
 
 	const etags = ifNoneMatch.split(',').map(e => e.trim().replace(/"/g, ''));
-	const content = await existingObj.arrayBuffer();
-	const currentEtag = await generateETag(content);
-	const currentEtagClean = currentEtag.replace(/"/g, '');
+	const currentEtagClean = etag.replace(/"/g, '');
 
 	if (etags.includes(currentEtagClean)) {
 		return { valid: false, status: 412 };
@@ -465,7 +459,14 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 
 		// GET/HEAD download or metadata retrieval
 		const obj = await this.env.BUCKET.get(path);
+
+		// Early return for non-existent resources (but still check If-Match)
 		if (!obj) {
+			const ifMatch = request.headers.get('If-Match');
+			if (ifMatch === '*') {
+				return createResponse('Precondition Failed', { status: 412 }, request);
+			}
+
 			if (request.method === 'HEAD') {
 				const resource = await getResourceInfo(path, this.env.BUCKET);
 				if (resource?.isCollection) {
@@ -488,17 +489,129 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 		const size = obj.size;
 		const lastModified = obj.uploaded.toUTCString();
 
+		// Use R2's native etag (MD5 of content for single-part uploads)
+		const etag = formatETag(obj.etag);
+
+		// Check If-Match precondition
+		const ifMatch = request.headers.get('If-Match');
+		if (ifMatch) {
+			const matchResult = validateIfMatch(ifMatch, true, etag);
+			if (!matchResult.valid) {
+				return createResponse('Precondition Failed', { status: matchResult.status! }, request);
+			}
+		}
+
+		// Check If-None-Match precondition
+		const ifNoneMatch = request.headers.get('If-None-Match');
+		if (ifNoneMatch) {
+			const noneMatchResult = validateIfNoneMatch(ifNoneMatch, true, etag);
+			if (!noneMatchResult.valid) {
+				// For GET, return 304 if If-None-Match matches
+				if (request.method === 'GET') {
+					return createResponse(null, {
+						status: 304,
+						headers: {
+							'ETag': etag,
+							'Last-Modified': lastModified
+						}
+					}, request);
+				}
+				return createResponse('Precondition Failed', { status: noneMatchResult.status! }, request);
+			}
+		}
+
+		// Check If-Modified-Since precondition (only for GET/HEAD)
+		const ifModifiedSince = request.headers.get('If-Modified-Since');
+		if (ifModifiedSince && (request.method === 'GET' || request.method === 'HEAD')) {
+			const requestDate = new Date(ifModifiedSince);
+			const resourceDate = new Date(lastModified);
+			// If resource hasn't been modified since the date, return 304
+			if (resourceDate <= requestDate) {
+				return createResponse(null, {
+					status: 304,
+					headers: {
+						'ETag': etag,
+						'Last-Modified': lastModified
+					}
+				}, request);
+			}
+		}
+
+		// Check If-Unmodified-Since precondition
+		const ifUnmodifiedSince = request.headers.get('If-Unmodified-Since');
+		if (ifUnmodifiedSince) {
+			const requestDate = new Date(ifUnmodifiedSince);
+			// Invalid dates (NaN) should be ignored
+			// Some timezone abbreviations like EST are problematic, so check for those
+			// GMT/UTC are standard and should work
+			const hasProblematicTimezone = ifUnmodifiedSince.match(/\b(EST|CST|MST|PST)\b/);
+			if (!isNaN(requestDate.getTime()) && !hasProblematicTimezone) {
+				const resourceDate = new Date(lastModified);
+				// If resource has been modified since the date, return 412
+				if (resourceDate > requestDate) {
+					return createResponse('Precondition Failed', { status: 412 }, request);
+				}
+			}
+		}
+
 		// Handle Range requests for video/audio streaming
-		const rangeHeader = request.headers.get('Range');
+		// Note: HEAD requests should ignore Range header per HTTP spec
+		const rangeHeader = request.method !== 'HEAD' ? request.headers.get('Range') : null;
 		if (rangeHeader && size) {
+			// Check If-Range header
+			const ifRange = request.headers.get('If-Range');
+			if (ifRange) {
+				// If-Range can be an ETag or a date
+				// If it starts with " or W/, it's an ETag; otherwise it's a date
+				if (ifRange.startsWith('"') || ifRange.startsWith('W/')) {
+					// ETag comparison
+					if (ifRange !== etag) {
+						// If-Range doesn't match - return full content (200)
+						return createResponse(request.method === 'HEAD' ? null : obj.body, {
+							status: 200,
+							headers: {
+								'Content-Type': contentType,
+								'Content-Length': size.toString(),
+								'Last-Modified': lastModified,
+								'ETag': etag,
+								'Accept-Ranges': 'bytes'
+							}
+						}, request);
+					}
+				} else {
+					// Date comparison - compare with Last-Modified
+					// Per sabre/dav test expectations:
+					// If file was modified AFTER If-Range date → condition passes → return 206
+					// If file was modified BEFORE If-Range date → condition fails → return 200
+					const ifRangeDate = new Date(ifRange);
+					const lastModDate = new Date(lastModified);
+					if (lastModDate > ifRangeDate) {
+						// File was modified after client's version date
+						// Client has old version, return full content (200)
+						return createResponse(request.method === 'HEAD' ? null : obj.body, {
+							status: 200,
+							headers: {
+								'Content-Type': contentType,
+								'Content-Length': size.toString(),
+								'Last-Modified': lastModified,
+								'ETag': etag,
+								'Accept-Ranges': 'bytes'
+							}
+						}, request);
+					}
+					// File was modified on or before client's version date
+					// Client has current version, fall through to range handling
+				}
+			}
+
 			const range = parseRangeHeader(rangeHeader, size);
 			if (range) {
 				const { start, end } = range;
 				const contentLength = end - start + 1;
 
-				// Get the full content and slice it
-				const fullContent = await obj.arrayBuffer();
-				const slicedContent = fullContent.slice(start, end + 1);
+				// Buffer content only for range slicing
+				const content = await obj.arrayBuffer();
+				const slicedContent = content.slice(start, end + 1);
 
 				return createResponse(request.method === 'HEAD' ? null : slicedContent, {
 					status: 206,
@@ -507,6 +620,7 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 						'Content-Length': contentLength.toString(),
 						'Content-Range': `bytes ${start}-${end}/${size}`,
 						'Last-Modified': lastModified,
+						'ETag': etag,
 						'Accept-Ranges': 'bytes'
 					}
 				}, request);
@@ -520,35 +634,16 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 			}, request);
 		}
 
-		// Check If-None-Match for caching
-		const ifNoneMatch = request.headers.get('If-None-Match');
-		if (ifNoneMatch) {
-			const content = await obj.arrayBuffer();
-			const etag = await generateETag(content);
-			const etags = ifNoneMatch.split(',').map(e => e.trim().replace(/"/g, ''));
-			if (etags.includes(etag.replace(/"/g, ''))) {
-				return createResponse(null, { status: 304 }, request); // Not Modified
-			}
-			// Re-fetch the object because the body has already been consumed
-			const obj2 = await this.env.BUCKET.get(path);
-			return createResponse(request.method === 'HEAD' ? null : obj2!.body, {
-				status: 200,
-				headers: {
-					'Content-Type': obj2!.httpMetadata?.contentType || 'application/octet-stream',
-					'Content-Length': obj2!.size.toString(),
-					'Last-Modified': obj2!.uploaded.toUTCString(),
-					'ETag': etag,
-					'Accept-Ranges': 'bytes'
-				}
-			}, request);
-		}
+		// Non-range request: stream for GET, null for HEAD
+		const body = request.method === 'GET' ? obj.body : null;
 
-		return createResponse(request.method === 'HEAD' ? null : obj.body, {
+		return createResponse(body, {
 			status: 200,
 			headers: {
 				'Content-Type': contentType,
 				'Content-Length': size.toString(),
 				'Last-Modified': lastModified,
+				'ETag': etag,
 				'Accept-Ranges': 'bytes'
 			}
 		}, request);
@@ -603,12 +698,18 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 		const ifMatch = request.headers.get('If-Match');
 		const ifNoneMatch = request.headers.get('If-None-Match');
 
-		const matchResult = await validateIfMatch(ifMatch, existingObj);
+		// Get ETag for existing resource using R2's native etag (no buffering needed)
+		let etag = null;
+		if (existingObj) {
+			etag = formatETag(existingObj.etag);
+		}
+
+		const matchResult = validateIfMatch(ifMatch, isUpdate, etag || '');
 		if (!matchResult.valid) {
 			return createResponse('Precondition Failed', { status: matchResult.status! }, request);
 		}
 
-		const noneMatchResult = await validateIfNoneMatch(ifNoneMatch, existingObj);
+		const noneMatchResult = validateIfNoneMatch(ifNoneMatch, isUpdate, etag || '');
 		if (!noneMatchResult.valid) {
 			return createResponse('Precondition Failed', { status: noneMatchResult.status! }, request);
 		}
@@ -678,11 +779,11 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 		const ifMatch = request.headers.get('If-Match');
 		if (ifMatch) {
 			const existingObj = await this.env.BUCKET.get(path);
-			if (existingObj) {
-				const matchResult = await validateIfMatch(ifMatch, existingObj);
-				if (!matchResult.valid) {
-					return createResponse('Precondition Failed', { status: matchResult.status! }, request);
-				}
+			// Use R2's native etag (no buffering needed)
+			const etag = existingObj ? formatETag(existingObj.etag) : '';
+			const matchResult = validateIfMatch(ifMatch, existingObj !== null, etag);
+			if (!matchResult.valid) {
+				return createResponse('Precondition Failed', { status: matchResult.status! }, request);
 			}
 		}
 
@@ -779,9 +880,13 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 			return createResponse('Not Found', { status: 404 }, request);
 		}
 
+		// PROPFIND returns 207 Multi-Status
 		return createResponse(xml, {
 			status: 207,
-			headers: { 'Content-Type': 'application/xml; charset=utf-8' }
+			headers: {
+				'Content-Type': 'application/xml; charset=utf-8',
+				'DAV': '1, 2'
+			}
 		}, request);
 	}
 
@@ -862,7 +967,7 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 		}
 
 		// Extract token from header: <opaquelocktoken:xxx>
-		const tokenMatch = lockTokenHeader.match(/<(opaquelocktoken:[a-f0-9-]+)>/i);
+		const tokenMatch = lockTokenHeader.match(/<(opaquelocktoken:[^>]+)>/i);
 		if (!tokenMatch) {
 			return createResponse('Bad Request: Invalid Lock-Token format', { status: 400 }, request);
 		}
@@ -903,8 +1008,20 @@ async function buildPropfindResponse(
 	const responses: string[] = [];
 	const resource = await getResourceInfo(path, env.BUCKET);
 
+	// If resource doesn't exist but parent exists, return 404
+	// If the parent doesn't exist either, return empty multistatus (for root paths)
 	if (!resource) {
-		return null;
+		// Check if parent exists
+		const parentPath = path.split('/').slice(0, -1).join('/') || '/';
+		const parentResource = await getResourceInfo(parentPath, env.BUCKET);
+		if (parentResource && parentResource.isCollection) {
+			// Parent exists but this resource doesn't - return null to trigger 404
+			return null;
+		}
+		// For non-existent paths without existing parent, return empty multistatus
+		return `<?xml version="1.0" encoding="utf-8"?>
+<D:multistatus xmlns:D="DAV:">
+</D:multistatus>`;
 	}
 
 	// Use decoded path for href (will be encoded in renderResponse)

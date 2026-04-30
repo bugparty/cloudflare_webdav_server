@@ -116,7 +116,7 @@ describe('WebDAV Server Preconditions', () => {
 			const testEnv = createTestEnv();
 			await t.createTestFile('foo', 'content', 'text/plain', testEnv);
 
-			const request = t.createAuthRequest('POST', '/foo', {
+			const request = t.createAuthRequest('PUT', '/foo', {
 				body: 'new content',
 				headers: {
 					'If-None-Match': '"1234"',
@@ -125,7 +125,7 @@ describe('WebDAV Server Preconditions', () => {
 			});
 			const response = await executeRequest(request, testEnv);
 
-			// Should succeed because the ETag doesn't match
+			// Should succeed because the ETag doesn't match (PUT succeeds on existing file)
 			expect(response.status === 200 || response.status === 201 || response.status === 204).toBe(true);
 		});
 
@@ -133,7 +133,7 @@ describe('WebDAV Server Preconditions', () => {
 			const testEnv = createTestEnv();
 			await t.createTestFile('foo', 'content', 'text/plain', testEnv);
 
-			const request = t.createAuthRequest('POST', '/foo', {
+			const request = t.createAuthRequest('PUT', '/foo', {
 				body: 'new content',
 				headers: {
 					'If-None-Match': '"1234", "5678"',
@@ -155,7 +155,7 @@ describe('WebDAV Server Preconditions', () => {
 			const headResponse = await executeRequest(headRequest, testEnv);
 			const etag = headResponse.headers.get('ETag') || '"abc123"';
 
-			const request = t.createAuthRequest('POST', '/foo', {
+			const request = t.createAuthRequest('PUT', '/foo', {
 				body: 'new content',
 				headers: {
 					'If-None-Match': etag,

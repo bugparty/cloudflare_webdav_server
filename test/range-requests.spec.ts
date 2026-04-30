@@ -281,10 +281,10 @@ describe('WebDAV Range Requests', () => {
 			});
 			const response = await executeRequest(request, testEnv);
 
-			assertStatus(206, response);
-			expect(response.headers.get('Content-Range')).toBe('bytes 0-4/11');
-			expect(response.headers.get('Content-Length')).toBe('5');
-
+			// Per PHP test: HEAD ignores Range and returns full content (200)
+			assertStatus(200, response);
+			// Full content length, not partial
+			expect(response.headers.get('Content-Length')).toBe('11');
 			// HEAD should not return body
 			const content = await response.text();
 			expect(content).toBe('');

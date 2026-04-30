@@ -905,7 +905,8 @@ async function buildPropfindResponse(
 		return null;
 	}
 
-	const requestHref = url.pathname || '/';
+	// Use decoded path for href (will be encoded in renderResponse)
+	const requestHref = '/' + path;
 	const selfHref = resource.isCollection && !requestHref.endsWith('/') ? `${requestHref}/` : requestHref;
 	const selfMeta: ObjectMetadata = {
 		size: resource.isCollection ? 0 : resource.size,

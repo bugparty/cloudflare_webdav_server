@@ -104,13 +104,12 @@ async function materializeResponse(response: Response): Promise<Response> {
 export async function createTestFile(
 	path: string,
 	content: string | ArrayBuffer,
-	contentType: string = 'text/plain',
+	contentType?: string,
 	testEnv: Env = createTestEnv()
 ): Promise<void> {
 	const body = typeof content === 'string' ? new TextEncoder().encode(content) : content;
-	await testEnv.BUCKET.put(path, body, {
-		httpMetadata: { contentType }
-	});
+	const metadata = contentType ? { contentType } : {};
+	await testEnv.BUCKET.put(path, body, { httpMetadata: metadata });
 }
 
 /**
@@ -145,9 +144,13 @@ export async function fileExists(
 ): Promise<boolean> {
 	// Check if it's a directory (ends with /)
 	if (path.endsWith('/')) {
+		// First check for directory placeholder (key ends with /)
+		const placeholder = await testEnv.BUCKET.get(path);
+		if (placeholder) return true;
+
+		// Then check if there are any objects with this prefix
 		const prefix = path.replace(/\/+$/, '');
 		const list = await testEnv.BUCKET.list({ prefix: prefix + '/', limit: 1 });
-		// Directory exists if there's at least one object with this prefix
 		return list.objects.length > 0;
 	}
 	// Check for file

@@ -18,6 +18,89 @@ function normalizePath(pathname: string): string {
 	return pathname.replace(/\/+/g, '/').replace(/^\//, '');
 }
 
+function removeTrailingSlash(path: string): string {
+	return path.replace(/\/+$/, '');
+}
+
+function ensureTrailingSlash(path: string): string {
+	if (!path || path.endsWith('/')) return path;
+	return `${path}/`;
+}
+
+function escapeXml(value: string): string {
+	return value
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&apos;');
+}
+
+function getDestinationPath(destination: string, requestUrl: string): string | null {
+	try {
+		return normalizePath(new URL(destination, requestUrl).pathname);
+	} catch {
+		return null;
+	}
+}
+
+type ResourceInfo = {
+	path: string;
+	isCollection: boolean;
+	size: number;
+	updated: Date;
+	contentType?: string;
+};
+
+async function getResourceInfo(path: string, bucket: R2Bucket): Promise<ResourceInfo | null> {
+	if (!path) {
+		return {
+			path: '',
+			isCollection: true,
+			size: 0,
+			updated: new Date(),
+			contentType: 'httpd/unix-directory'
+		};
+	}
+
+	const directObj = await bucket.get(path);
+	if (directObj) {
+		const contentType = directObj.httpMetadata?.contentType;
+		return {
+			path,
+			isCollection: path.endsWith('/') || contentType === 'text/directory',
+			size: directObj.size,
+			updated: directObj.uploaded,
+			contentType
+		};
+	}
+
+	const dirPath = ensureTrailingSlash(path);
+	const dirObj = await bucket.get(dirPath);
+	if (dirObj) {
+		return {
+			path: dirPath,
+			isCollection: true,
+			size: dirObj.size,
+			updated: dirObj.uploaded,
+			contentType: dirObj.httpMetadata?.contentType || 'httpd/unix-directory'
+		};
+	}
+
+	const listed = await bucket.list({ prefix: dirPath, delimiter: '/', limit: 1 });
+	if (listed.objects.length > 0 || listed.delimitedPrefixes.length > 0) {
+		return {
+			path: dirPath,
+			isCollection: true,
+			size: 0,
+			updated: listed.objects[0]?.uploaded || new Date(),
+			contentType: 'httpd/unix-directory'
+		};
+	}
+
+	return null;
+}
+
 /**
  * Generate a content-based ETag.
  */
@@ -111,9 +194,8 @@ async function checkParentExists(path: string, bucket: R2Bucket): Promise<boolea
 	const parentPath = normalizedPath.substring(0, lastSlash);
 	if (!parentPath) return true;
 
-	// Check whether the parent path is a directory
-	const parentDir = await bucket.get(parentPath + '/');
-	if (parentDir) return true;
+	const parentInfo = await getResourceInfo(parentPath, bucket);
+	if (parentInfo?.isCollection) return true;
 
 	// Check whether the parent path is a file, which should not happen
 	const parentFile = await bucket.get(parentPath);
@@ -136,13 +218,14 @@ async function handleMoveOrCopy(
 		return createResponse('Bad Request: Missing Destination header', { status: 400 }, request);
 	}
 
-	const destinationPath = normalizePath(new URL(destination).pathname);
+	const destinationPath = getDestinationPath(destination, request.url);
+	if (destinationPath === null) {
+		return createResponse('Bad Request: Invalid Destination header', { status: 400 }, request);
+	}
 
 	// Reject moves/copies to the same path.
 	if (
-		sourcePath === destinationPath ||
-		sourcePath + '/' === destinationPath ||
-		sourcePath === destinationPath + '/'
+		removeTrailingSlash(sourcePath) === removeTrailingSlash(destinationPath)
 	) {
 		return createResponse('Forbidden: Cannot move/copy to self', { status: 403 }, request);
 	}
@@ -162,12 +245,15 @@ async function handleMoveOrCopy(
 	const overwrite = request.headers.get('Overwrite');
 
 	try {
-		const sourceObj = await env.BUCKET.get(sourcePath);
-		if (!sourceObj) {
+		const sourceInfo = await getResourceInfo(sourcePath, env.BUCKET);
+		if (!sourceInfo || sourceInfo.isCollection) {
 			return createResponse('Not Found', { status: 404 }, request);
 		}
+		const sourceObj = await env.BUCKET.get(sourceInfo.path);
+		if (!sourceObj) return createResponse('Not Found', { status: 404 }, request);
 
-		const destinationExists = await env.BUCKET.get(destinationPath);
+		const destinationInfo = await getResourceInfo(destinationPath, env.BUCKET);
+		const destinationExists = destinationInfo !== null;
 		if (destinationExists && overwrite === 'F') {
 			return createResponse('Precondition Failed: Destination exists and Overwrite is F', { status: 412 }, request);
 		}
@@ -269,9 +355,25 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 
 		// Check X-Expected-Entity-Length (macOS Finder)
 		const expectedLength = request.headers.get('X-Expected-Entity-Length');
-		const body = await request.arrayBuffer();
-		if (expectedLength && parseInt(expectedLength) !== body.byteLength) {
-			return createResponse('Content length mismatch', { status: 403 }, request);
+		const contentLength = request.headers.get('Content-Length');
+		let putBody: ReadableStream | ArrayBuffer | string | null = request.body;
+		let bodyLengthForLog = contentLength ? parseInt(contentLength, 10) : undefined;
+
+		if (expectedLength) {
+			const expectedLengthValue = parseInt(expectedLength, 10);
+
+			if (contentLength) {
+				if (bodyLengthForLog !== expectedLengthValue) {
+					return createResponse('Content length mismatch', { status: 403 }, request);
+				}
+			} else {
+				const body = await request.arrayBuffer();
+				putBody = body;
+				bodyLengthForLog = body.byteLength;
+				if (body.byteLength !== expectedLengthValue) {
+					return createResponse('Content length mismatch', { status: 403 }, request);
+				}
+			}
 		}
 
 		const contentType = request.headers.get('Content-Type') || getMimeType(path);
@@ -307,7 +409,7 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 			`PUT Operation Details:`,
 			`- Target path: ${path}`,
 			`- Content-Type: ${contentType}`,
-			`- Content-Length: ${body.byteLength} bytes`,
+			`- Content-Length: ${bodyLengthForLog ?? 'stream'} bytes`,
 			`- Is update: ${isUpdate}`,
 			`- Timestamp: ${new Date().toISOString()}`
 		];
@@ -315,11 +417,11 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 		console.log('PUT operation:', writeInfo.join('\n'));
 
 		try {
-			await this.env.BUCKET.put(path, body, {
+			const uploaded = await this.env.BUCKET.put(path, putBody ?? '', {
 				httpMetadata: { contentType }
 			});
 
-			const etag = await generateETag(body);
+			const etag = uploaded.httpEtag || `"${uploaded.etag}"`;
 			const statusCode = isUpdate ? 204 : 201;
 
 			logWriteOperation('PUT', path, { operation: 'PUT', path, result: 'SUCCESS' });
@@ -444,8 +546,12 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 	async onPropfind(request: Request): Promise<Response> {
 		const url = new URL(request.url);
 		let path = normalizePath(url.pathname);
-		const list = await this.env.BUCKET.list({ prefix: path, delimiter: '/' });
-		const xml = await buildPropfindResponse(path, new URL(request.url), this.env, list);
+		const depth = request.headers.get('Depth') || '1';
+		const xml = await buildPropfindResponse(path, url, this.env, depth);
+
+		if (!xml) {
+			return createResponse('Not Found', { status: 404 }, request);
+		}
 
 		return createResponse(xml, {
 			status: 207,
@@ -566,47 +672,51 @@ async function buildPropfindResponse(
 	path: string,
 	url: URL,
 	env: Env,
-	list: R2Objects
-): Promise<string> {
+	depth: string
+): Promise<string | null> {
 	const responses: string[] = [];
+	const resource = await getResourceInfo(path, env.BUCKET);
 
-	// Get metadata for the object itself
-	let selfMeta: ObjectMetadata | null = null;
-	try {
-		const selfObj = await env.BUCKET.get(path);
-		if (selfObj) {
-			selfMeta = {
-				size: selfObj.size,
-				httpMetadata: {
-					updated: selfObj.uploaded,
-					contentType: selfObj.httpMetadata?.contentType
-				}
-			};
+	if (!resource) {
+		return null;
+	}
+
+	const requestHref = url.pathname || '/';
+	const selfHref = resource.isCollection && !requestHref.endsWith('/') ? `${requestHref}/` : requestHref;
+	const selfMeta: ObjectMetadata = {
+		size: resource.isCollection ? 0 : resource.size,
+		httpMetadata: {
+			updated: resource.updated,
+			contentType: resource.contentType
 		}
-	} catch (e) {
-		// Ignore errors here
+	};
+
+	responses.push(renderResponse(selfHref, selfMeta, resource.isCollection));
+
+	if (!resource.isCollection || depth === '0') {
+		return `<?xml version="1.0" encoding="utf-8"?>
+<D:multistatus xmlns:D="DAV:">
+  ${responses.join('\n')}
+</D:multistatus>`;
 	}
 
-	if (!selfMeta) {
-		selfMeta = { size: 0, httpMetadata: { updated: new Date() } };
-	}
-
-	responses.push(renderResponse(url.pathname, selfMeta));
+	const collectionPrefix = ensureTrailingSlash(resource.path);
+	const list = await env.BUCKET.list({ prefix: collectionPrefix, delimiter: '/' });
+	const seenHrefs = new Set<string>([selfHref]);
 
 	// Render child files
 	for (const obj of list.objects || []) {
 		// Skip the directory itself (it's already added above)
-		if (obj.key === path || obj.key === path + '/') {
+		if (obj.key === resource.path || obj.key === collectionPrefix || obj.key.endsWith('/')) {
 			continue;
 		}
 
-		let relativePath = obj.key;
-		if (path && obj.key.startsWith(path)) {
-			relativePath = obj.key.slice(path.length);
-		}
+		const relativePath = obj.key.slice(collectionPrefix.length);
 		// Only include immediate children (no nested slashes)
 		if (!relativePath.includes('/')) {
-			const href = url.pathname + relativePath;
+			const href = `${selfHref}${relativePath}`;
+			if (seenHrefs.has(href)) continue;
+			seenHrefs.add(href);
 			const objMeta: ObjectMetadata = {
 				size: obj.size,
 				httpMetadata: {
@@ -614,19 +724,18 @@ async function buildPropfindResponse(
 					contentType: obj.httpMetadata?.contentType
 				}
 			};
-			responses.push(renderResponse(href, objMeta));
+			responses.push(renderResponse(href, objMeta, false));
 		}
 	}
 
 	// Render child directories
-	for (const prefix of list.delimitedPrefixes || []) {
-		let relativePath = prefix;
-		if (path && prefix.startsWith(path)) {
-			relativePath = prefix.slice(path.length);
-		}
-		const href = url.pathname + relativePath;
+	for (const childPrefix of list.delimitedPrefixes || []) {
+		const relativePath = childPrefix.slice(collectionPrefix.length);
+		const href = `${selfHref}${relativePath}`;
+		if (seenHrefs.has(href)) continue;
+		seenHrefs.add(href);
 		const dirMeta: ObjectMetadata = { size: 0, httpMetadata: { updated: new Date() } };
-		responses.push(renderResponse(href, dirMeta));
+		responses.push(renderResponse(href, dirMeta, true));
 	}
 
 	return `<?xml version="1.0" encoding="utf-8"?>
@@ -635,16 +744,21 @@ async function buildPropfindResponse(
 </D:multistatus>`;
 }
 
-function renderResponse(href: string, obj: ObjectMetadata): string {
+function renderResponse(href: string, obj: ObjectMetadata, isCollection: boolean): string {
 	const lastmod = obj.httpMetadata.updated.toUTCString();
 	const size = obj.size || 0;
+	const contentType = obj.httpMetadata.contentType || (isCollection ? 'httpd/unix-directory' : getMimeType(href));
+	const displayName = href.split('/').filter(p => p).pop() || '/';
+
 	return `<D:response>
-    <D:href>${href}</D:href>
+    <D:href>${escapeXml(href)}</D:href>
     <D:propstat>
       <D:prop>
         <D:getlastmodified>${lastmod}</D:getlastmodified>
         <D:getcontentlength>${size}</D:getcontentlength>
-        <D:resourcetype>${href.endsWith('/') ? '<D:collection/>' : ''}</D:resourcetype>
+        <D:resourcetype>${isCollection ? '<D:collection/>' : ''}</D:resourcetype>
+        <D:getcontenttype>${escapeXml(contentType)}</D:getcontenttype>
+        <D:displayname>${escapeXml(displayName)}</D:displayname>
       </D:prop>
       <D:status>HTTP/1.1 200 OK</D:status>
     </D:propstat>

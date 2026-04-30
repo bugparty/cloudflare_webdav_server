@@ -36,6 +36,21 @@ describe('WebDAV COPY Requests', () => {
 			const newContent = await getFileContent('file2', testEnv);
 			expect(newContent).toBe('foo');
 		});
+
+		it('should accept a relative Destination path', async () => {
+			const testEnv = createTestEnv();
+			await t.createTestFile('file1', 'foo', 'text/plain', testEnv);
+
+			const request = t.createAuthRequest('COPY', '/file1', {
+				headers: { 'Destination': '/file2' }
+			});
+			const response = await executeRequest(request, testEnv);
+
+			assertStatus(201, response);
+
+			const newContent = await getFileContent('file2', testEnv);
+			expect(newContent).toBe('foo');
+		});
 	});
 
 	describe('testCopyFileToSelf', () => {

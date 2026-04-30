@@ -147,6 +147,22 @@ describe('WebDAV PUT Requests', () => {
 
 			assertStatus(409, response);
 		});
+
+		it('should allow PUT into an implicit directory prefix', async () => {
+			const testEnv = createTestEnv();
+			await t.createTestFile('implicit/existing.txt', 'existing', 'text/plain', testEnv);
+
+			const request = t.createAuthRequest('PUT', '/implicit/new.txt', {
+				body: 'hello',
+				headers: { 'Content-Type': 'text/plain' }
+			});
+			const response = await executeRequest(request, testEnv);
+
+			assertStatus(201, response);
+
+			const content = await getFileContent('implicit/new.txt', testEnv);
+			expect(content).toBe('hello');
+		});
 	});
 
 	describe('testFinderPutSuccess', () => {

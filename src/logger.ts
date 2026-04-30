@@ -114,8 +114,9 @@ export function getHttpLog(): string {
 export function clearHttpLog(): void {
 	httpLogBuffer = [];
 }
+
 // Handle debug routes
-export function handleDebugRoutes(request: Request): Response | null {
+export async function handleDebugRoutes(request: Request, env?: any): Promise<Response | null> {
 	const url = new URL(request.url);
 	const pathname = url.pathname;
 	const method = request.method;
@@ -133,43 +134,119 @@ Available Debug Endpoints:
 ==========================
 
 View Logs:
-- HTTP Logs: /_debug/http-log
+- HTTP Logs (Memory): /_debug/http-log
 - Write Operation Logs: /_debug/write-log
 - All Logs: /_debug/all-logs
+- D1 Logs (Persistent): /_debug/d1-logs?limit=100
+- D1 Log Stats: /_debug/d1-stats
 
 Clear Logs (via GET - click in browser):
 - Clear HTTP Logs: /_debug/clear-http-log
 - Clear Write Logs: /_debug/clear-write-log
 - Clear All Logs: /_debug/clear-all-logs
+- Clear D1 Logs: /_debug/clear-d1-logs
 
 Clear Logs (via DELETE - use with curl):
 - DELETE /_debug/http-log
 - DELETE /_debug/write-log
 - DELETE /_debug/all-logs
+- DELETE /_debug/d1-logs
 
 Usage Examples:
 ===============
 
 1. View logs in browser:
-   http://localhost:8787/_debug/http-log
+   https://s32webdav.0xff.workers.dev/_debug/http-log
+   https://s32webdav.0xff.workers.dev/_debug/d1-logs
 
 2. Clear logs in browser:
-   http://localhost:8787/_debug/clear-all-logs
+   https://s32webdav.0xff.workers.dev/_debug/clear-all-logs
 
 3. Clear logs with curl:
-   curl -X DELETE http://localhost:8787/_debug/all-logs
+   curl -X DELETE -u bowman:password https://s32webdav.0xff.workers.dev/_debug/d1-logs
 
 Log Status:
 ===========
-- HTTP Log Entries:${logStatus.httpLogEntries}
+- HTTP Log Entries (Memory): ${logStatus.httpLogEntries}
 - Write Operation Log Entries: ${logStatus.writeOperationLogEntries}
-- Max HTTP Log Entries:${logStatus.maxHttpLogEntries}
+- Max HTTP Log Entries: ${logStatus.maxHttpLogEntries}
 - Max Write Log Entries: ${logStatus.maxWriteLogEntries}
 		`;
 
 		return new Response(debugPanel, {
 			headers: { 'Content-Type': 'text/plain' }
 		});
+	}
+
+	// D1 persistent logs
+	if (pathname === '/_debug/d1-logs') {
+		if (method === 'GET') {
+			if (!env?.DB) {
+				return new Response('D1 database not configured', { status: 500 });
+			}
+
+			try {
+				const { getRecentLogs, formatLogEntry } = await import('./log-persistence');
+				const limit = parseInt(url.searchParams.get('limit') || '100');
+				const logs = await getRecentLogs(env.DB, limit);
+				const formatted = logs.map(formatLogEntry).join('\n');
+				return new Response(formatted || 'No logs found', {
+					headers: { 'Content-Type': 'text/plain' }
+				});
+			} catch (e) {
+				return new Response(`Error loading D1 logs: ${e}`, { status: 500 });
+			}
+		} else if (method === 'DELETE') {
+			if (!env?.DB) {
+				return new Response('D1 database not configured', { status: 500 });
+			}
+
+			try {
+				const { clearAllLogs } = await import('./log-persistence');
+				const count = await clearAllLogs(env.DB);
+				return new Response(`Cleared ${count} D1 log entries`, {
+					headers: { 'Content-Type': 'text/plain' }
+				});
+			} catch (e) {
+				return new Response(`Error clearing D1 logs: ${e}`, { status: 500 });
+			}
+		}
+	}
+
+	// D1 log statistics
+	if (pathname === '/_debug/d1-stats') {
+		if (method === 'GET') {
+			if (!env?.DB) {
+				return new Response('D1 database not configured', { status: 500 });
+			}
+
+			try {
+				const { getLogStats } = await import('./log-persistence');
+				const stats = await getLogStats(env.DB);
+				return new Response(JSON.stringify(stats, null, 2), {
+					headers: { 'Content-Type': 'application/json' }
+				});
+			} catch (e) {
+				return new Response(`Error loading D1 stats: ${e}`, { status: 500 });
+			}
+		}
+	}
+
+	// Clear D1 logs via GET
+	if (method === 'GET' && pathname === '/_debug/clear-d1-logs') {
+		if (!env?.DB) {
+			return new Response('D1 database not configured', { status: 500 });
+		}
+
+		try {
+			const { clearAllLogs } = await import('./log-persistence');
+			const count = await clearAllLogs(env.DB);
+			return new Response(`Cleared ${count} D1 log entries`, {
+				headers: { 'Content-Type': 'text/plain' }
+			});
+		} catch (e) {
+			return new Response(`Error clearing D1 logs: ${e}`, { status: 500 });
+		}
 	}
 
 	// HTTP log routes

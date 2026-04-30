@@ -75,6 +75,22 @@ describe('WebDAV PROPFIND Requests', () => {
 		});
 	});
 
+	describe('testPropFindMissingResource', () => {
+		it('should return 404 for a non-existent resource', async () => {
+			const testEnv = createTestEnv();
+			await t.createTestDirectory('dir', testEnv);
+
+			const request = t.createAuthRequest('PROPFIND', '/dir/missing.txt', {
+				headers: {
+					'Depth': '0'
+				}
+			});
+			const response = await executeRequest(request, testEnv);
+
+			assertStatus(404, response);
+		});
+	});
+
 	describe('testPropFindDirectory', () => {
 		it('should return properties for a directory', async () => {
 			const testEnv = createTestEnv();
@@ -90,6 +106,24 @@ describe('WebDAV PROPFIND Requests', () => {
 			assertStatus(207, response);
 
 			const body = await response.text();
+			expect(body).toContain('<D:collection/>');
+		});
+
+		it('should return collection metadata for a directory without trailing slash', async () => {
+			const testEnv = createTestEnv();
+			await t.createTestDirectory('dir', testEnv);
+
+			const request = t.createAuthRequest('PROPFIND', '/dir', {
+				headers: {
+					'Depth': '0'
+				}
+			});
+			const response = await executeRequest(request, testEnv);
+
+			assertStatus(207, response);
+
+			const body = await response.text();
+			expect(body).toContain('<D:href>/dir/</D:href>');
 			expect(body).toContain('<D:collection/>');
 		});
 	});

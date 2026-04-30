@@ -188,7 +188,7 @@ export function generateLockResponse(lock: LockInfo, href: string): string {
 <D:prop xmlns:D="DAV:">
   <D:lockdiscovery>
     <D:activelock>
-      <D:locktype><D:${lock.scope}/></D:locktype>
+      <D:locktype><D:write/></D:locktype>
       <D:lockscope><D:${lock.scope}/></D:lockscope>
       <D:depth>${lock.depth}</D:depth>
       <D:owner>${lock.owner}</D:owner>

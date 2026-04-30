@@ -2,6 +2,7 @@ export interface Env {
 	BUCKET: R2Bucket;
 	DB: D1Database;
 	LOCKS: KVNamespace;
+	LOG_DO: DurableObjectNamespace;
 	WEBDAV_USERNAME?: string;
 	WEBDAV_PASSWORD?: string;
 }

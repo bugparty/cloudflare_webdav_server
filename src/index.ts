@@ -1,5 +1,6 @@
 import { Env } from './types';
 import { logHttpInteraction, handleDebugRoutes } from './logger';
+import { LogDurableObject } from './log-do';
 import {
 	isMacOSWebDAVClient,
 	authenticateRequest,
@@ -17,7 +18,7 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 	davDelegate.init(env);
 
 	// Handle debug routes
-	const debugResponse = handleDebugRoutes(request);
+	const debugResponse = await handleDebugRoutes(request, env);
 	if (debugResponse) {
 		return debugResponse;
 	}
@@ -78,16 +79,35 @@ export default {
 			additionalInfo = `Server Error: ${error}`;
 		}
 
-		// Record HTTP interaction logs, but avoid duplicate entries
+		// Record HTTP interaction logs
 		const method = request.method;
 		const url = new URL(request.url);
-		const isDebugRoute = url.pathname === '/_debug/http-log';
-		const isModifyOperation = ['PUT', 'DELETE', 'MKCOL', 'MOVE', 'COPY'].includes(method);
+		const isDebugRoute = url.pathname.startsWith('/_debug');
 
-		if (!isDebugRoute && !isModifyOperation) {
+		// Log to memory (for immediate viewing)
+		if (!isDebugRoute) {
 			logHttpInteraction(request, response, additionalInfo);
+		}
+
+		// Log to Durable Object (real-time streaming)
+		if (!isDebugRoute && env.LOG_DO) {
+			try {
+				const id = env.LOG_DO.idFromName('global');
+				const stub = env.LOG_DO.get(id);
+				const timestamp = new Date().toISOString();
+				const logEntry = `${timestamp} - ${request.method} ${url.pathname} → ${response.status}`;
+				await stub.fetch('http://internal/', {
+					method: 'POST',
+					body: logEntry
+				});
+			} catch (e) {
+				console.error('Failed to log to Durable Object:', e);
+			}
 		}
 
 		return response;
 	}
 } as ExportedHandler<Env>;
+
+// Export Durable Object
+export { LogDurableObject };

@@ -21,6 +21,7 @@ export function createTestEnv(overrides: Partial<Env> = {}): Env {
 		...env,
 		WEBDAV_USERNAME: 'testuser',
 		WEBDAV_PASSWORD: 'testpass',
+		LOCKS: env.LOCKS || {} as KVNamespace, // Use env.LOCKS if available, otherwise mock
 		...overrides
 	};
 }

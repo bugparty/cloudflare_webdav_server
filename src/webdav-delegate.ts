@@ -1,6 +1,15 @@
 import { WebDAVDelegate, Env, ObjectMetadata } from './types';
 import { createResponse, addMacOSCompatibilityHeaders } from './macos';
-import { logWriteOperation, logHttpInteraction, handleDebugRoutes } from './logger';
+import { logWriteOperation, logHttpInteraction } from './logger';
+import {
+	getLock,
+	createLock,
+	deleteLock,
+	parseLockRequest,
+	generateLockResponse,
+	checkPathLocked
+} from './lock';
+import { getMimeType, detectMimeTypeFromContent } from './mime';
 
 /**
  * Normalize a path by collapsing duplicate slashes and removing the leading slash.
@@ -110,6 +119,86 @@ async function checkParentExists(path: string, bucket: R2Bucket): Promise<boolea
 	return false; // The parent path does not exist
 }
 
+async function handleMoveOrCopy(
+	request: Request,
+	env: Env,
+	isMove: boolean
+): Promise<Response> {
+	const url = new URL(request.url);
+	const sourcePath = normalizePath(url.pathname);
+
+	// Parse the target path from the Destination header.
+	const destination = request.headers.get('Destination');
+	if (!destination) {
+		return createResponse('Bad Request: Missing Destination header', { status: 400 }, request);
+	}
+
+	const destinationPath = normalizePath(new URL(destination).pathname);
+
+	// Reject moves/copies to the same path.
+	if (
+		sourcePath === destinationPath ||
+		sourcePath + '/' === destinationPath ||
+		sourcePath === destinationPath + '/'
+	) {
+		return createResponse('Forbidden: Cannot move/copy to self', { status: 403 }, request);
+	}
+
+	// Check whether the source and destination are locked.
+	const ifHeader = request.headers.get('If');
+	const sourceLockCheck = await checkPathLocked(sourcePath, env, ifHeader);
+	if (sourceLockCheck.locked) {
+		return createResponse('Locked', { status: sourceLockCheck.status! }, request);
+	}
+
+	const destinationLockCheck = await checkPathLocked(destinationPath, env, ifHeader);
+	if (destinationLockCheck.locked) {
+		return createResponse('Locked', { status: destinationLockCheck.status! }, request);
+	}
+
+	const overwrite = request.headers.get('Overwrite');
+
+	try {
+		const sourceObj = await env.BUCKET.get(sourcePath);
+		if (!sourceObj) {
+			return createResponse('Not Found', { status: 404 }, request);
+		}
+
+		const destinationExists = await env.BUCKET.get(destinationPath);
+		if (destinationExists && overwrite === 'F') {
+			return createResponse('Precondition Failed: Destination exists and Overwrite is F', { status: 412 }, request);
+		}
+
+		const parentExists = await checkParentExists(destinationPath, env.BUCKET);
+		if (!parentExists) {
+			return createResponse('Conflict: Destination parent does not exist', { status: 409 }, request);
+		}
+
+		await env.BUCKET.put(destinationPath, sourceObj.body, { httpMetadata: sourceObj.httpMetadata });
+
+		if (isMove) {
+			await env.BUCKET.delete(sourcePath);
+		}
+
+		console.log(`${request.method}: ${sourcePath} -> ${destinationPath}`);
+		logWriteOperation(request.method, sourcePath, {
+			sourcePath,
+			destPath: destinationPath,
+			result: 'SUCCESS'
+		});
+
+		const statusCode = destinationExists ? 204 : 201;
+		const response = createResponse(null, { status: statusCode }, request);
+		logHttpInteraction(request, response, `${request.method} SUCCESS: ${sourcePath} -> ${destinationPath}`);
+		return response;
+	} catch (error) {
+		console.error(`${request.method} operation failed:`, error);
+		const response = createResponse('Internal Server Error', { status: 500 }, request);
+		logHttpInteraction(request, response, `${request.method} FAILED: ${error}`);
+		return response;
+	}
+}
+
 export class WebDAVDelegateImpl implements WebDAVDelegate {
 	env: Env;
 	constructor() {
@@ -163,6 +252,13 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 		const url = new URL(request.url);
 		let path = normalizePath(url.pathname);
 
+		// Check if resource is locked
+		const ifHeader = request.headers.get('If');
+		const lockCheck = await checkPathLocked(path, this.env, ifHeader);
+		if (lockCheck.locked) {
+			return createResponse('Locked', { status: lockCheck.status! }, request);
+		}
+
 		// Reject requests with a Content-Range header
 		if (request.headers.get('Content-Range')) {
 			return createResponse('Content-Range not supported for PUT', { status: 400 }, request);
@@ -175,7 +271,7 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 			return createResponse('Content length mismatch', { status: 403 }, request);
 		}
 
-		const contentType = request.headers.get('Content-Type') || 'application/octet-stream';
+		const contentType = request.headers.get('Content-Type') || getMimeType(path);
 
 		// Check whether the file already exists
 		const existingObj = await this.env.BUCKET.get(path);
@@ -242,6 +338,13 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 	async onDelete(request: Request): Promise<Response> {
 		const url = new URL(request.url);
 		let path = normalizePath(url.pathname);
+
+		// Check if resource is locked
+		const ifHeader = request.headers.get('If');
+		const lockCheck = await checkPathLocked(path, this.env, ifHeader);
+		if (lockCheck.locked) {
+			return createResponse('Locked', { status: lockCheck.status! }, request);
+		}
 
 		// Check whether the file exists first
 		const existingObj = await this.env.BUCKET.get(path);
@@ -316,10 +419,28 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 		}
 	}
 
+	async onMove(request: Request): Promise<Response> {
+		return handleMoveOrCopy(request, this.env, true);
+	}
+
+	async onCopy(request: Request): Promise<Response> {
+		return handleMoveOrCopy(request, this.env, false);
+	}
+
+	/**
+	 * Handle WebDAV PROPFIND requests to retrieve resource properties.
+	 * 
+	 * PROPFIND is used by WebDAV clients (e.g., macOS Finder) to query metadata
+	 * about files and directories, such as size, modification date, and resource type.
+	 * This implementation lists the target resource and its immediate children,
+	 * then formats the response as XML according to the WebDAV multistatus format.
+	 * 
+	 * @param request - The incoming WebDAV PROPFIND request
+	 * @returns A 207 Multi-Status response containing XML-formatted resource metadata
+	 */
 	async onPropfind(request: Request): Promise<Response> {
 		const url = new URL(request.url);
 		let path = normalizePath(url.pathname);
-		const depth = request.headers.get('Depth') || '1';
 		const list = await this.env.BUCKET.list({ prefix: path, delimiter: '/' });
 		const xml = await buildPropfindResponse(path, new URL(request.url), this.env, list);
 
@@ -329,15 +450,111 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 		}, request);
 	}
 
-	async onOptions(request: Request): Promise<Response> {
+	async onOptions(_request: Request): Promise<Response> {
 		const response = new Response(null, {
 			status: 200,
 			headers: {
-				'Allow': 'OPTIONS, GET, HEAD, PUT, DELETE, PROPFIND, MKCOL, MOVE, COPY',
+				'Allow': 'OPTIONS, GET, HEAD, PUT, DELETE, PROPFIND, MKCOL, MOVE, COPY, LOCK, UNLOCK',
 				'DAV': '1, 2'
 			}
 		});
 		addMacOSCompatibilityHeaders(response.headers);
+		return response;
+	}
+
+	async onLock(request: Request): Promise<Response> {
+		const url = new URL(request.url);
+		let path = normalizePath(url.pathname);
+
+		// Check if resource exists
+		const existingObj = await this.env.BUCKET.get(path);
+
+		// Parse lock request body
+		const body = await request.text();
+		const lockOptions = parseLockRequest(body);
+
+		// Check Depth header (default to 0 for existing resources, infinity for collections)
+		const depthHeader = request.headers.get('Depth');
+		if (depthHeader) {
+			lockOptions.depth = depthHeader === '0' ? '0' : 'infinity';
+		}
+
+		// Check for existing lock
+		const existingLock = await getLock(path, this.env);
+		if (existingLock) {
+			// Resource is already locked
+			// Return 423 Locked if the lock token doesn't match
+			const ifHeader = request.headers.get('If');
+			if (ifHeader && !ifHeader.includes(existingLock.token)) {
+				return createResponse('Locked', { status: 423 }, request);
+			}
+			// Lock refresh - return existing lock
+			return createResponse(generateLockResponse(existingLock, url.pathname), {
+				status: 200,
+				headers: {
+					'Content-Type': 'application/xml; charset=utf-8',
+					'Lock-Token': `<${existingLock.token}>`
+				}
+			}, request);
+		}
+
+		// Create new lock
+		const lock = await createLock(path, this.env, lockOptions);
+
+		console.log(`LOCK operation: ${path} (token: ${lock.token})`);
+		logWriteOperation('LOCK', path, { operation: 'LOCK', path, token: lock.token, result: 'SUCCESS' });
+
+		const response = createResponse(generateLockResponse(lock, url.pathname), {
+			status: existingObj ? 200 : 201,
+			headers: {
+				'Content-Type': 'application/xml; charset=utf-8',
+				'Lock-Token': `<${lock.token}>`
+			}
+		}, request);
+
+		logHttpInteraction(request, response, `LOCK SUCCESS: ${lock.token}`);
+		return response;
+	}
+
+	async onUnlock(request: Request): Promise<Response> {
+		const url = new URL(request.url);
+		let path = normalizePath(url.pathname);
+
+		// Parse Lock-Token header
+		const lockTokenHeader = request.headers.get('Lock-Token');
+		if (!lockTokenHeader) {
+			return createResponse('Bad Request: Missing Lock-Token header', { status: 400 }, request);
+		}
+
+		// Extract token from header: <opaquelocktoken:xxx>
+		const tokenMatch = lockTokenHeader.match(/<(opaquelocktoken:[a-f0-9-]+)>/i);
+		if (!tokenMatch) {
+			return createResponse('Bad Request: Invalid Lock-Token format', { status: 400 }, request);
+		}
+		const token = tokenMatch[1];
+
+		// Check if lock exists
+		const existingLock = await getLock(path, this.env);
+		if (!existingLock) {
+			// No lock exists - return 409 Conflict or 204?
+			// RFC 4918 says UNLOCK on unlocked resource should return 204
+			return createResponse(null, { status: 204 }, request);
+		}
+
+		// Verify token matches
+		if (existingLock.token !== token) {
+			// Token doesn't match - return 403 Forbidden
+			return createResponse('Forbidden: Lock token does not match', { status: 403 }, request);
+		}
+
+		// Delete the lock
+		await deleteLock(path, this.env);
+
+		console.log(`UNLOCK operation: ${path} (token: ${token})`);
+		logWriteOperation('UNLOCK', path, { operation: 'UNLOCK', path, token, result: 'SUCCESS' });
+
+		const response = createResponse(null, { status: 204 }, request);
+		logHttpInteraction(request, response, 'UNLOCK SUCCESS');
 		return response;
 	}
 }

@@ -36,6 +36,12 @@
 		"binding": "BUCKET"
 		}
   ],
+	"kv_namespaces": [
+		{
+			"binding": "LOCKS",
+			"id": "8e119b317c5547d181c1f63e46016304"
+		}
+	],
 	/**
 	 * Environment Variables
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables

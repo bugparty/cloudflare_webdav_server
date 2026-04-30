@@ -70,7 +70,7 @@ export function unauthorizedResponse(request: Request): Response {
 			'WWW-Authenticate': `Basic realm=""`,
 			'Content-Type': 'text/plain',
 			'DAV': '1,2',
-			'Allow': 'OPTIONS, LOCK, DELETE, PROPPATCH, COPY, MOVE, UNLOCK, PROPFIND'
+			'Allow': 'OPTIONS, GET, HEAD, PUT, DELETE, PROPFIND, MKCOL, MOVE, COPY, LOCK, UNLOCK'
 		}
 	});
 
@@ -148,7 +148,7 @@ export async function handleMacOSOptionsRequest(request: Request, davDelegate: W
 		const response = new Response(null, {
 			status: 200,
 			headers: {
-				'Allow': 'OPTIONS, LOCK, DELETE, PROPPATCH, COPY, MOVE, UNLOCK, PROPFIND',
+				'Allow': 'OPTIONS, GET, HEAD, PUT, DELETE, PROPFIND, MKCOL, MOVE, COPY, LOCK, UNLOCK',
 				'DAV': '1,2',
 				'Content-Length': '0',
 			}

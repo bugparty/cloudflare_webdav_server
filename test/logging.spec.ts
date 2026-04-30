@@ -10,7 +10,7 @@ describe('request logging', () => {
 	it('persists request logs in D1 and redacts sensitive headers', async () => {
 		const testEnv = createTestEnv({ DB: env.DB });
 
-		await executeRequest(new Request('http://example.com/_debug/clear-all-logs'), testEnv);
+		await executeRequest(createAuthRequest('GET', '/_debug/clear-all-logs'), testEnv);
 
 		const response = await executeRequest(createAuthRequest('OPTIONS', '/logged-path?x=1', {
 			headers: {
@@ -20,7 +20,7 @@ describe('request logging', () => {
 		}), testEnv);
 		expect(response.status).toBe(200);
 
-		const logResponse = await executeRequest(new Request('http://example.com/_debug/d1-logs?limit=5'), testEnv);
+		const logResponse = await executeRequest(createAuthRequest('GET', '/_debug/d1-logs?limit=5'), testEnv);
 		const logText = await logResponse.text();
 
 		expect(logResponse.status).toBe(200);
@@ -34,12 +34,12 @@ describe('request logging', () => {
 	it('exposes recent Durable Object logs through debug routes', async () => {
 		const testEnv = createTestEnv({ DB: env.DB, LOG_DO: env.LOG_DO });
 
-		await executeRequest(new Request('http://example.com/_debug/clear-all-logs'), testEnv);
+		await executeRequest(createAuthRequest('GET', '/_debug/clear-all-logs'), testEnv);
 
 		const response = await executeRequest(createAuthRequest('OPTIONS', '/durable-log-path'), testEnv);
 		expect(response.status).toBe(200);
 
-		const logResponse = await executeRequest(new Request('http://example.com/_debug/do-logs?limit=5'), testEnv);
+		const logResponse = await executeRequest(createAuthRequest('GET', '/_debug/do-logs?limit=5'), testEnv);
 		const logText = await logResponse.text();
 
 		expect(logResponse.status).toBe(200);

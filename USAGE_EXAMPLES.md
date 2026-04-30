@@ -1,26 +1,26 @@
-# WebDAV Basic Auth 使用示例
+# WebDAV Basic Auth Usage Examples
 
-## 配置步骤
+## Setup steps
 
-### 1. 配置生产环境认证（推荐）
+### 1. Configure production authentication
 
 ```bash
-# 设置用户名
+# Set username
 wrangler secret put WEBDAV_USERNAME
-# 输入: myusername
+# Input: myusername
 
-# 设置密码
+# Set password
 wrangler secret put WEBDAV_PASSWORD
-# 输入: mysecurepassword
+# Input: mysecurepassword
 ```
 
-### 2. 配置开发环境认证
+### 2. Configure development authentication
 
-在 `wrangler.jsonc` 文件中：
+In `wrangler.jsonc`:
 
 ```jsonc
 {
-  // ... 其他配置
+  // ... other config
   "vars": {
     "WEBDAV_USERNAME": "testuser",
     "WEBDAV_PASSWORD": "testpass"
@@ -28,81 +28,81 @@ wrangler secret put WEBDAV_PASSWORD
 }
 ```
 
-## 客户端连接示例
+## Client connection examples
 
 ### macOS Finder
 
-1. 打开 Finder
-2. 按 `Cmd + K` 或选择 "前往" > "连接服务器"
-3. 输入服务器地址：`https://your-worker.your-subdomain.workers.dev`
-4. 输入用户名和密码
+1. Open Finder
+2. Press `Cmd + K` or choose "Go" > "Connect to Server"
+3. Enter the server address: `https://your-worker.your-subdomain.workers.dev`
+4. Enter the username and password
 
-### Windows 资源管理器
+### Windows File Explorer
 
-1. 打开资源管理器
-2. 右键点击 "此电脑" > "映射网络驱动器"
-3. 选择驱动器号
-4. 输入文件夹路径：`https://your-worker.your-subdomain.workers.dev`
-5. 勾选 "使用其他凭据连接"
-6. 输入用户名和密码
+1. Open File Explorer
+2. Right-click "This PC" > "Map network drive"
+3. Choose a drive letter
+4. Enter the folder path: `https://your-worker.your-subdomain.workers.dev`
+5. Check "Connect using different credentials"
+6. Enter the username and password
 
-### curl 命令行
+### curl command line
 
 ```bash
-# 列出根目录
+# List the root directory
 curl -u myusername:mysecurepassword -X PROPFIND https://your-worker.your-subdomain.workers.dev/
 
-# 上传文件
+# Upload a file
 curl -u myusername:mysecurepassword -T local-file.txt https://your-worker.your-subdomain.workers.dev/remote-file.txt
 
-# 下载文件
+# Download a file
 curl -u myusername:mysecurepassword https://your-worker.your-subdomain.workers.dev/remote-file.txt -o downloaded-file.txt
 
-# 创建目录
+# Create a directory
 curl -u myusername:mysecurepassword -X MKCOL https://your-worker.your-subdomain.workers.dev/new-folder/
 
-# 删除文件
+# Delete a file
 curl -u myusername:mysecurepassword -X DELETE https://your-worker.your-subdomain.workers.dev/file-to-delete.txt
 ```
 
-### Python 示例
+### Python example
 
 ```python
 import requests
 from requests.auth import HTTPBasicAuth
 
-# 配置
+# Configuration
 webdav_url = "https://your-worker.your-subdomain.workers.dev"
 username = "myusername"
 password = "mysecurepassword"
 auth = HTTPBasicAuth(username, password)
 
-# 上传文件
+# Upload a file
 with open('local-file.txt', 'rb') as f:
     response = requests.put(f"{webdav_url}/remote-file.txt", data=f, auth=auth)
     print(f"Upload status: {response.status_code}")
 
-# 下载文件
+# Download a file
 response = requests.get(f"{webdav_url}/remote-file.txt", auth=auth)
 if response.status_code == 200:
     with open('downloaded-file.txt', 'wb') as f:
         f.write(response.content)
 ```
 
-## 测试部署
+## Test deployment
 
 ```bash
-# 部署到开发环境
+# Deploy to the development environment
 npm run deploy
 
-# 测试连接
+# Test the connection
 curl -u testuser:testpass -X OPTIONS https://your-worker.your-subdomain.workers.dev/
 ```
 
-## 安全提示
+## Security notes
 
-1. 始终使用HTTPS连接
-2. 使用强密码
-3. 定期更换密码
-4. 不要在代码中硬编码密码
-5. 在生产环境中使用 Cloudflare Workers secrets
+1. Always use HTTPS.
+2. Use strong passwords.
+3. Rotate passwords regularly.
+4. Do not hardcode passwords in code.
+5. Use Cloudflare Workers secrets in production.

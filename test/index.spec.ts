@@ -26,6 +26,25 @@ describe('WebDAV worker', () => {
 		expect(response.headers.get('WWW-Authenticate')).toBe('Basic realm=""');
 	});
 
+	it('protects debug routes with Basic Auth', async () => {
+		const request = new Request('http://example.com/_debug/d1-logs', {
+			method: 'GET'
+		});
+		const ctx = createExecutionContext();
+		const testEnv: Env = {
+			...env,
+			DB: undefined,
+			LOG_DO: undefined,
+			WEBDAV_USERNAME: 'testuser',
+			WEBDAV_PASSWORD: 'testpass'
+		};
+		const response = await testWorker.fetch(request as any, testEnv, ctx);
+		await waitOnExecutionContext(ctx);
+		await response.text();
+		expect(response.status).toBe(401);
+		expect(response.headers.get('WWW-Authenticate')).toBe('Basic realm=""');
+	});
+
 	it('responds with OPTIONS for authorized request', async () => {
 		const credentials = btoa('testuser:testpass');
 		const request = new Request('http://example.com', {

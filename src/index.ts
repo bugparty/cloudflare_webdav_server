@@ -18,12 +18,6 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 	let davDelegate = new WebDAVDelegateImpl();
 	davDelegate.init(env);
 
-	// Handle debug routes
-	const debugResponse = await handleDebugRoutes(request, env);
-	if (debugResponse) {
-		return debugResponse;
-	}
-
 	// macOS compatibility: handle OPTIONS requests before authentication
 	if (isMacOS && request.method === 'OPTIONS') {
 		const optionsResponse = await handleMacOSOptionsRequest(request, davDelegate);
@@ -35,6 +29,13 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 	// Authenticate the request
 	if (!authenticateRequest(request, env)) {
 		return unauthorizedResponse(request);
+	}
+
+	// Handle debug routes only after authentication because logs may contain
+	// request paths, client metadata, and operational state.
+	const debugResponse = await handleDebugRoutes(request, env);
+	if (debugResponse) {
+		return debugResponse;
 	}
 
 	const url = new URL(request.url);

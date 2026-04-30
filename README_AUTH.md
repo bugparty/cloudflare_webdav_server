@@ -1,12 +1,12 @@
-# WebDAV Basic Auth 配置说明
+# WebDAV Basic Auth Setup
 
-这个WebDAV服务器现在支持Basic Auth身份验证。
+This WebDAV server now supports Basic Auth authentication.
 
-## 配置方法
+## Configuration
 
-### 1. 本地开发环境
+### 1. Local development
 
-在 `wrangler.jsonc` 文件中取消注释并配置环境变量：
+Uncomment and configure the environment variables in `wrangler.jsonc`:
 
 ```jsonc
 "vars": {
@@ -15,42 +15,42 @@
 }
 ```
 
-### 2. 生产环境
+### 2. Production
 
-为了安全起见，建议使用Cloudflare Workers的secrets功能来存储用户名和密码：
+For security, use Cloudflare Workers secrets to store the username and password:
 
 ```bash
-# 设置用户名
+# Set username
 wrangler secret put WEBDAV_USERNAME
 
-# 设置密码
+# Set password
 wrangler secret put WEBDAV_PASSWORD
 ```
 
-### 3. 向后兼容
+### 3. Backward compatibility
 
-如果没有设置 `WEBDAV_USERNAME` 和 `WEBDAV_PASSWORD` 环境变量，服务器将允许所有请求通过（向后兼容模式）。
+If `WEBDAV_USERNAME` and `WEBDAV_PASSWORD` are not set, the server will allow all requests through for backward compatibility.
 
-## 使用方法
+## Usage
 
-配置完成后，客户端需要使用Basic Auth进行连接：
+After configuration, clients must connect using Basic Auth:
 
-- **用户名**: 您设置的 WEBDAV_USERNAME
-- **密码**: 您设置的 WEBDAV_PASSWORD
+- **Username**: the `WEBDAV_USERNAME` you set
+- **Password**: the `WEBDAV_PASSWORD` you set
 
-### 客户端示例
+### Client examples
 
 #### curl
 ```bash
 curl -u username:password https://your-worker.your-subdomain.workers.dev/
 ```
 
-#### 文件管理器
-大多数支持WebDAV的文件管理器（如macOS Finder、Windows资源管理器等）都会提示输入用户名和密码。
+#### File managers
+Most WebDAV-capable file managers, such as macOS Finder and Windows Explorer, will prompt for a username and password.
 
-## 安全注意事项
+## Security notes
 
-1. 始终使用HTTPS连接
-2. 在生产环境中使用secrets而不是环境变量来存储凭据
-3. 定期更换密码
-4. 考虑使用强密码生成器生成复杂密码
+1. Always use HTTPS.
+2. Use secrets rather than environment variables to store credentials in production.
+3. Rotate passwords regularly.
+4. Consider using a password generator to create strong passwords.

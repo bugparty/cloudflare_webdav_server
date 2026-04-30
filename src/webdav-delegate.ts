@@ -46,6 +46,45 @@ function escapeXml(value: string): string {
 		.replace(/'/g, '&apos;');
 }
 
+/**
+ * Parse HTTP Range header.
+ * Supports formats: "bytes=0-1023", "bytes=1024-", "bytes=-1024"
+ * Returns null if invalid.
+ */
+function parseRangeHeader(rangeHeader: string, fileSize: number): { start: number; end: number } | null {
+	const match = rangeHeader.match(/bytes=(\d*)-(\d*)/);
+	if (!match) return null;
+
+	const startStr = match[1];
+	const endStr = match[2];
+
+	let start: number;
+	let end: number;
+
+	if (startStr === '') {
+		// Suffix range: "bytes=-500" means last 500 bytes
+		const suffixLength = parseInt(endStr, 10);
+		if (isNaN(suffixLength) || suffixLength <= 0) return null;
+		start = Math.max(0, fileSize - suffixLength);
+		end = fileSize - 1;
+	} else if (endStr === '') {
+		// Open-ended range: "bytes=500-" means from byte 500 to end
+		start = parseInt(startStr, 10);
+		if (isNaN(start) || start < 0 || start >= fileSize) return null;
+		end = fileSize - 1;
+	} else {
+		// Specific range: "bytes=0-499"
+		start = parseInt(startStr, 10);
+		end = parseInt(endStr, 10);
+		if (isNaN(start) || isNaN(end) || start < 0 || end < start) return null;
+		if (start >= fileSize) return null;
+		// Clamp end to file size
+		end = Math.min(end, fileSize - 1);
+	}
+
+	return { start, end };
+}
+
 function getDestinationPath(destination: string, requestUrl: string): string | null {
 	try {
 		return normalizePath(new URL(destination, requestUrl).pathname);
@@ -426,6 +465,42 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 		const obj = await this.env.BUCKET.get(path);
 		if (!obj) return createResponse('Not Found', { status: 404 }, request);
 
+		const contentType = obj.httpMetadata?.contentType || 'application/octet-stream';
+		const size = obj.size;
+		const lastModified = obj.uploaded.toUTCString();
+
+		// Handle Range requests for video/audio streaming
+		const rangeHeader = request.headers.get('Range');
+		if (rangeHeader && size) {
+			const range = parseRangeHeader(rangeHeader, size);
+			if (range) {
+				const { start, end } = range;
+				const contentLength = end - start + 1;
+
+				// Get the full content and slice it
+				const fullContent = await obj.arrayBuffer();
+				const slicedContent = fullContent.slice(start, end + 1);
+
+				return createResponse(request.method === 'HEAD' ? null : slicedContent, {
+					status: 206,
+					headers: {
+						'Content-Type': contentType,
+						'Content-Length': contentLength.toString(),
+						'Content-Range': `bytes ${start}-${end}/${size}`,
+						'Last-Modified': lastModified,
+						'Accept-Ranges': 'bytes'
+					}
+				}, request);
+			}
+			// Invalid range - return 416
+			return createResponse('Requested Range Not Satisfiable', {
+				status: 416,
+				headers: {
+					'Content-Range': `bytes */${size}`
+				}
+			}, request);
+		}
+
 		// Check If-None-Match for caching
 		const ifNoneMatch = request.headers.get('If-None-Match');
 		if (ifNoneMatch) {
@@ -443,7 +518,8 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 					'Content-Type': obj2!.httpMetadata?.contentType || 'application/octet-stream',
 					'Content-Length': obj2!.size.toString(),
 					'Last-Modified': obj2!.uploaded.toUTCString(),
-					'ETag': etag
+					'ETag': etag,
+					'Accept-Ranges': 'bytes'
 				}
 			}, request);
 		}
@@ -451,9 +527,10 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 		return createResponse(request.method === 'HEAD' ? null : obj.body, {
 			status: 200,
 			headers: {
-				'Content-Type': obj.httpMetadata?.contentType || 'application/octet-stream',
-				'Content-Length': obj.size.toString(),
-				'Last-Modified': obj.uploaded.toUTCString()
+				'Content-Type': contentType,
+				'Content-Length': size.toString(),
+				'Last-Modified': lastModified,
+				'Accept-Ranges': 'bytes'
 			}
 		}, request);
 	}

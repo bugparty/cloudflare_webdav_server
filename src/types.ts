@@ -9,6 +9,7 @@ export interface Env {
 
 export interface ObjectMetadata {
 	size: number;
+	etag?: string;
 	httpMetadata: {
 		updated: Date;
 		contentType?: string;
@@ -28,6 +29,7 @@ export interface WebDAVDelegate {
 	onPost?: (request: Request) => Promise<Response>;
 	onLock?: (request: Request) => Promise<Response>;
 	onUnlock?: (request: Request) => Promise<Response>;
+	onProppatch?: (request: Request) => Promise<Response>;
 	onTrace?: (request: Request) => Promise<Response>;
 	onSearch?: (request: Request) => Promise<Response>;
 	onAcl?: (request: Request) => Promise<Response>;

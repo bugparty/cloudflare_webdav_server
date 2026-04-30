@@ -2,11 +2,13 @@
  * WebDAV PROPPATCH request tests.
  * Based on sabre-io/dav tests/Sabre/DAV/PropPatchTest.php
  *
- * Note: PROPPATCH is not yet implemented in this WebDAV server.
- * These tests verify the server returns appropriate 405 Method Not Allowed.
+ * The server accepts PROPPATCH and returns 207 Multi-Status, acknowledging
+ * the request without actually persisting custom properties (live properties
+ * such as getlastmodified are read-only; custom dead properties are silently
+ * ignored rather than stored).
  */
 
-import { describe, it, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
 	WebDAVTest as t,
 	createTestEnv,
@@ -20,7 +22,7 @@ describe('WebDAV PROPPATCH Requests', () => {
 	});
 
 	describe('testPropPatchSingleSuccess', () => {
-		it('should return 405 Method Not Allowed (PROPPATCH not implemented)', async () => {
+		it('should return 207 for a set operation on an existing file', async () => {
 			const testEnv = createTestEnv();
 			await t.createTestFile('file1', 'content', 'text/plain', testEnv);
 
@@ -41,13 +43,15 @@ describe('WebDAV PROPPATCH Requests', () => {
 			});
 			const response = await executeRequest(request, testEnv);
 
-			// PROPPATCH is not implemented yet - returns 405
-			assertStatus(405, response);
+			assertStatus(207, response);
+			const body = await response.text();
+			expect(body).toContain('<D:multistatus');
+			expect(body).toContain('/file1');
 		});
 	});
 
 	describe('testPropPatchSingleDelete', () => {
-		it('should return 405 Method Not Allowed for property deletion', async () => {
+		it('should return 207 for a remove operation on an existing file', async () => {
 			const testEnv = createTestEnv();
 			await t.createTestFile('file1', 'content', 'text/plain', testEnv);
 
@@ -68,12 +72,12 @@ describe('WebDAV PROPPATCH Requests', () => {
 			});
 			const response = await executeRequest(request, testEnv);
 
-			assertStatus(405, response);
+			assertStatus(207, response);
 		});
 	});
 
 	describe('testPropPatchMultipleProperties', () => {
-		it('should return 405 for multiple property updates', async () => {
+		it('should return 207 for multiple property updates', async () => {
 			const testEnv = createTestEnv();
 			await t.createTestFile('file1', 'content', 'text/plain', testEnv);
 
@@ -100,12 +104,12 @@ describe('WebDAV PROPPATCH Requests', () => {
 			});
 			const response = await executeRequest(request, testEnv);
 
-			assertStatus(405, response);
+			assertStatus(207, response);
 		});
 	});
 
 	describe('testPropPatchCustomNamespace', () => {
-		it('should return 405 for custom namespace properties', async () => {
+		it('should return 207 for custom namespace properties', async () => {
 			const testEnv = createTestEnv();
 			await t.createTestFile('file1', 'content', 'text/plain', testEnv);
 
@@ -126,12 +130,12 @@ describe('WebDAV PROPPATCH Requests', () => {
 			});
 			const response = await executeRequest(request, testEnv);
 
-			assertStatus(405, response);
+			assertStatus(207, response);
 		});
 	});
 
 	describe('testPropPatchMultipleOperations', () => {
-		it('should return 405 for set and remove operations in sequence', async () => {
+		it('should return 207 for set and remove operations in sequence', async () => {
 			const testEnv = createTestEnv();
 			await t.createTestFile('file1', 'content', 'text/plain', testEnv);
 
@@ -151,12 +155,12 @@ describe('WebDAV PROPPATCH Requests', () => {
 			});
 			const response = await executeRequest(request, testEnv);
 
-			assertStatus(405, response);
+			assertStatus(207, response);
 		});
 	});
 
 	describe('testPropPatchOnDirectory', () => {
-		it('should return 405 for PROPPATCH on directory', async () => {
+		it('should return 207 for PROPPATCH on a directory', async () => {
 			const testEnv = createTestEnv();
 			await t.createTestDirectory('dir', testEnv);
 
@@ -177,12 +181,15 @@ describe('WebDAV PROPPATCH Requests', () => {
 			});
 			const response = await executeRequest(request, testEnv);
 
-			assertStatus(405, response);
+			assertStatus(207, response);
 		});
 	});
 
 	describe('testPropPatch404', () => {
-		it('should return 405 for non-existent resource (not 404 since method not allowed)', async () => {
+		it('should return 404 for a non-existent resource', async () => {
+			const testEnv = createTestEnv();
+			await t.createTestDirectory('dir', testEnv); // parent exists
+
 			const proppatchBody = `<?xml version="1.0" encoding="utf-8"?>
 <D:propertyupdate xmlns:D="DAV:">
   <D:set>
@@ -192,16 +199,15 @@ describe('WebDAV PROPPATCH Requests', () => {
   </D:set>
 </D:propertyupdate>`;
 
-			const request = t.createAuthRequest('PROPPATCH', '/nonexistent', {
+			const request = t.createAuthRequest('PROPPATCH', '/dir/nonexistent.txt', {
 				body: proppatchBody,
 				headers: {
 					'Content-Type': 'application/xml; charset="utf-8"'
 				}
 			});
-			const response = await executeRequest(request);
+			const response = await executeRequest(request, testEnv);
 
-			// Since PROPPATCH is not implemented at all, it returns 405 even for non-existent resources
-			assertStatus(405, response);
+			assertStatus(404, response);
 		});
 	});
 });

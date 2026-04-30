@@ -99,6 +99,7 @@ type ResourceInfo = {
 	size: number;
 	updated: Date;
 	contentType?: string;
+	etag?: string;
 };
 
 async function getResourceInfo(path: string, bucket: R2Bucket): Promise<ResourceInfo | null> {
@@ -120,7 +121,8 @@ async function getResourceInfo(path: string, bucket: R2Bucket): Promise<Resource
 			isCollection: path.endsWith('/') || contentType === 'text/directory',
 			size: directObj.size,
 			updated: directObj.uploaded,
-			contentType
+			contentType,
+			etag: directObj.etag
 		};
 	}
 
@@ -132,7 +134,8 @@ async function getResourceInfo(path: string, bucket: R2Bucket): Promise<Resource
 			isCollection: true,
 			size: dirObj.size,
 			updated: dirObj.uploaded,
-			contentType: dirObj.httpMetadata?.contentType || 'httpd/unix-directory'
+			contentType: dirObj.httpMetadata?.contentType || 'httpd/unix-directory',
+			etag: dirObj.etag
 		};
 	}
 
@@ -894,12 +897,48 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 		const response = new Response(null, {
 			status: 200,
 			headers: {
-				'Allow': 'OPTIONS, GET, HEAD, PUT, DELETE, PROPFIND, MKCOL, MOVE, COPY, LOCK, UNLOCK',
-				'DAV': '1, 2'
+				'Allow': 'OPTIONS, GET, HEAD, PUT, DELETE, PROPFIND, PROPPATCH, MKCOL, MOVE, COPY, LOCK, UNLOCK',
+				'DAV': '1, 2',
+				'Ms-Author-Via': 'DAV'
 			}
 		});
 		addMacOSCompatibilityHeaders(response.headers);
 		return response;
+	}
+
+	async onProppatch(request: Request): Promise<Response> {
+		const url = new URL(request.url);
+		const path = normalizePath(url.pathname);
+
+		// Check if resource is locked
+		const ifHeader = request.headers.get('If');
+		const lockCheck = await checkPathLocked(path, this.env, ifHeader);
+		if (lockCheck.locked) {
+			return createResponse('Locked', { status: lockCheck.status! }, request);
+		}
+
+		// Verify the resource exists
+		const resource = await getResourceInfo(path, this.env.BUCKET);
+		if (!resource) {
+			return createResponse('Not Found', { status: 404 }, request);
+		}
+
+		// Return 207 acknowledging the request; we don't store custom properties
+		const encodedHref = ('/' + path).split('/').map(s => s ? encodeURIComponent(s) : s).join('/');
+		const xml = `<?xml version="1.0" encoding="utf-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>${escapeXml(encodedHref)}</D:href>
+    <D:propstat>
+      <D:prop/>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>`;
+		return createResponse(xml, {
+			status: 207,
+			headers: { 'Content-Type': 'application/xml; charset=utf-8', 'DAV': '1, 2' }
+		}, request);
 	}
 
 	async onLock(request: Request): Promise<Response> {
@@ -1029,6 +1068,7 @@ async function buildPropfindResponse(
 	const selfHref = resource.isCollection && !requestHref.endsWith('/') ? `${requestHref}/` : requestHref;
 	const selfMeta: ObjectMetadata = {
 		size: resource.isCollection ? 0 : resource.size,
+		etag: resource.etag,
 		httpMetadata: {
 			updated: resource.updated,
 			contentType: resource.contentType
@@ -1063,6 +1103,7 @@ async function buildPropfindResponse(
 			seenHrefs.add(href);
 			const objMeta: ObjectMetadata = {
 				size: obj.size,
+				etag: obj.etag,
 				httpMetadata: {
 					updated: obj.uploaded,
 					contentType: obj.httpMetadata?.contentType
@@ -1095,13 +1136,15 @@ function renderResponse(href: string, obj: ObjectMetadata, isCollection: boolean
 	const displayName = href.split('/').filter(p => p).pop() || '/';
 
 	// URL-encode the href path per RFC 4918
-	// Split by '/' to preserve path separators, encode each segment
 	const encodedHref = href.split('/').map(segment => {
-		// Don't encode empty segments (leading/trailing slashes)
 		if (!segment) return segment;
-		// Use encodeURIComponent for proper URL encoding
 		return encodeURIComponent(segment);
 	}).join('/');
+
+	// ETag is "hexstring" — only &, <, > need escaping in element content; " does not.
+	const etagXml = (!isCollection && obj.etag)
+		? `\n        <D:getetag>${formatETag(obj.etag)}</D:getetag>`
+		: '';
 
 	return `<D:response>
     <D:href>${escapeXml(encodedHref)}</D:href>
@@ -1111,7 +1154,14 @@ function renderResponse(href: string, obj: ObjectMetadata, isCollection: boolean
         <D:getcontentlength>${size}</D:getcontentlength>
         <D:resourcetype>${isCollection ? '<D:collection/>' : ''}</D:resourcetype>
         <D:getcontenttype>${escapeXml(contentType)}</D:getcontenttype>
-        <D:displayname>${escapeXml(displayName)}</D:displayname>
+        <D:displayname>${escapeXml(displayName)}</D:displayname>${etagXml}
+        <D:supportedlock>
+          <D:lockentry>
+            <D:lockscope><D:exclusive/></D:lockscope>
+            <D:locktype><D:write/></D:locktype>
+          </D:lockentry>
+        </D:supportedlock>
+        <D:lockdiscovery/>
       </D:prop>
       <D:status>HTTP/1.1 200 OK</D:status>
     </D:propstat>

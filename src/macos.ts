@@ -148,7 +148,7 @@ export async function handleMacOSOptionsRequest(request: Request, davDelegate: W
 		const response = new Response(null, {
 			status: 200,
 			headers: {
-				'Allow': 'OPTIONS, GET, HEAD, PUT, DELETE, PROPFIND, MKCOL, MOVE, COPY, LOCK, UNLOCK',
+				'Allow': 'OPTIONS, GET, HEAD, PUT, DELETE, PROPFIND, PROPPATCH, MKCOL, MOVE, COPY, LOCK, UNLOCK',
 				'DAV': '1,2',
 				'Content-Length': '0',
 			}

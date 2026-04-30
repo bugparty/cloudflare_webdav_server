@@ -61,6 +61,8 @@ async function handleWebDAVRequest(request: Request, env: Env): Promise<Response
 			return await davDelegate.onMove(request);
 		case 'COPY':
 			return await davDelegate.onCopy(request);
+		case 'PROPPATCH':
+			return await davDelegate.onProppatch(request);
 
 		default:
 			return createResponse('Method Not Allowed', { status: 405 }, request);

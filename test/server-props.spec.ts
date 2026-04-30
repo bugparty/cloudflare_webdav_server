@@ -186,7 +186,7 @@ describe('WebDAV Server Properties', () => {
 	});
 
 	describe('testParsePropPatchRequest', () => {
-		it('should return 405 for PROPPATCH request (not yet implemented)', async () => {
+		it('should return 207 for PROPPATCH request on an existing collection', async () => {
 			const testEnv = createTestEnv();
 			await t.createTestDirectory('col', testEnv);
 
@@ -206,8 +206,7 @@ describe('WebDAV Server Properties', () => {
 			});
 			const response = await executeRequest(request, testEnv);
 
-			// PROPPATCH is not implemented yet
-			assertStatus(405, response);
+			assertStatus(207, response);
 		});
 	});
 });

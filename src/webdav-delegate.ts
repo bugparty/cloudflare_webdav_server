@@ -370,10 +370,12 @@ async function handleMoveOrCopyCollection(
 		await deleteCollection(destPrefix, env.BUCKET);
 	}
 
-	// Create destination directory (by creating a placeholder, R2 doesn't have true directories)
-	// We just need to ensure files can be placed under it
+	// Create destination directory placeholder
+	await env.BUCKET.put(destPrefix, '', {
+		httpMetadata: { contentType: 'text/directory' }
+	});
 
-	// For Depth: 0, only create the directory itself (do nothing for R2)
+	// For Depth: 0, only create the directory itself (done above)
 	// For Depth: infinity, recursively copy/move all contents
 	if (depth === 'infinity' || depth === 'INFINITY') {
 		// List all objects under source
@@ -388,7 +390,7 @@ async function handleMoveOrCopyCollection(
 		// Copy each object to destination
 		for (const list of allObjects) {
 			for (const obj of list.objects) {
-				// Skip the directory placeholder itself
+				// Skip the directory placeholder itself (we already created it)
 				if (obj.key === sourcePrefix || obj.key === sourcePath) continue;
 
 				// Calculate new key: replace source prefix with destination prefix

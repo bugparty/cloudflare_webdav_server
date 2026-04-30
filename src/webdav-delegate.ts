@@ -12,10 +12,20 @@ import {
 import { getMimeType, detectMimeTypeFromContent } from './mime';
 
 /**
- * Normalize a path by collapsing duplicate slashes and removing the leading slash.
+ * Normalize a path by:
+ * 1. Decoding URL-encoded characters (e.g., %20 -> space)
+ * 2. Collapsing duplicate slashes
+ * 3. Removing the leading slash
  */
 function normalizePath(pathname: string): string {
-	return pathname.replace(/\/+/g, '/').replace(/^\//, '');
+	try {
+		// Decode URL-encoded characters first
+		const decoded = decodeURIComponent(pathname);
+		return decoded.replace(/\/+/g, '/').replace(/^\//, '');
+	} catch {
+		// If decoding fails, fall back to original behavior
+		return pathname.replace(/\/+/g, '/').replace(/^\//, '');
+	}
 }
 
 function removeTrailingSlash(path: string): string {
@@ -243,14 +253,13 @@ async function handleMoveOrCopy(
 	}
 
 	const overwrite = request.headers.get('Overwrite');
+	const depth = request.headers.get('Depth') || 'infinity';
 
 	try {
 		const sourceInfo = await getResourceInfo(sourcePath, env.BUCKET);
-		if (!sourceInfo || sourceInfo.isCollection) {
+		if (!sourceInfo) {
 			return createResponse('Not Found', { status: 404 }, request);
 		}
-		const sourceObj = await env.BUCKET.get(sourceInfo.path);
-		if (!sourceObj) return createResponse('Not Found', { status: 404 }, request);
 
 		const destinationInfo = await getResourceInfo(destinationPath, env.BUCKET);
 		const destinationExists = destinationInfo !== null;
@@ -262,6 +271,18 @@ async function handleMoveOrCopy(
 		if (!parentExists) {
 			return createResponse('Conflict: Destination parent does not exist', { status: 409 }, request);
 		}
+
+		// Handle collection (directory)
+		if (sourceInfo.isCollection) {
+			return await handleMoveOrCopyCollection(
+				request, env, isMove, sourcePath, destinationPath,
+				destinationExists, depth
+			);
+		}
+
+		// Handle file
+		const sourceObj = await env.BUCKET.get(sourceInfo.path);
+		if (!sourceObj) return createResponse('Not Found', { status: 404 }, request);
 
 		await env.BUCKET.put(destinationPath, sourceObj.body, { httpMetadata: sourceObj.httpMetadata });
 
@@ -285,6 +306,106 @@ async function handleMoveOrCopy(
 		const response = createResponse('Internal Server Error', { status: 500 }, request);
 		logHttpInteraction(request, response, `${request.method} FAILED: ${error}`);
 		return response;
+	}
+}
+
+/**
+ * Handle MOVE/COPY for collections (directories).
+ * Recursively moves or copies all files and subdirectories.
+ */
+async function handleMoveOrCopyCollection(
+	request: Request,
+	env: Env,
+	isMove: boolean,
+	sourcePath: string,
+	destinationPath: string,
+	destinationExists: boolean,
+	depth: string
+): Promise<Response> {
+	// Ensure paths end with /
+	const sourcePrefix = ensureTrailingSlash(sourcePath);
+	const destPrefix = ensureTrailingSlash(destinationPath);
+
+	// If destination exists, delete it first
+	if (destinationExists) {
+		await deleteCollection(destPrefix, env.BUCKET);
+	}
+
+	// Create destination directory (by creating a placeholder, R2 doesn't have true directories)
+	// We just need to ensure files can be placed under it
+
+	// For Depth: 0, only create the directory itself (do nothing for R2)
+	// For Depth: infinity, recursively copy/move all contents
+	if (depth === 'infinity' || depth === 'INFINITY') {
+		// List all objects under source
+		const allObjects: R2Objects[] = [];
+		let cursor: string | undefined;
+		do {
+			const listed = await env.BUCKET.list({ prefix: sourcePrefix, cursor });
+			allObjects.push(listed);
+			cursor = listed.truncated ? listed.cursor : undefined;
+		} while (cursor);
+
+		// Copy each object to destination
+		for (const list of allObjects) {
+			for (const obj of list.objects) {
+				// Skip the directory placeholder itself
+				if (obj.key === sourcePrefix || obj.key === sourcePath) continue;
+
+				// Calculate new key: replace source prefix with destination prefix
+				const relativePath = obj.key.slice(sourcePrefix.length);
+				const newKey = destPrefix + relativePath;
+
+				// Get and put the object
+				const sourceObj = await env.BUCKET.get(obj.key);
+				if (sourceObj) {
+					await env.BUCKET.put(newKey, sourceObj.body, { httpMetadata: sourceObj.httpMetadata });
+				}
+			}
+		}
+
+		// If MOVE, delete all source objects
+		if (isMove) {
+			for (const list of allObjects) {
+				for (const obj of list.objects) {
+					await env.BUCKET.delete(obj.key);
+				}
+			}
+			// Delete source directory placeholder if it exists
+			await env.BUCKET.delete(sourcePrefix);
+			await env.BUCKET.delete(sourcePath);
+		}
+	}
+
+	console.log(`${request.method} collection: ${sourcePath} -> ${destinationPath}`);
+	logWriteOperation(request.method, sourcePath, {
+		sourcePath,
+		destPath: destinationPath,
+		result: 'SUCCESS'
+	});
+
+	const statusCode = destinationExists ? 204 : 201;
+	const response = createResponse(null, { status: statusCode }, request);
+	logHttpInteraction(request, response, `${request.method} collection SUCCESS: ${sourcePath} -> ${destinationPath}`);
+	return response;
+}
+
+/**
+ * Delete a collection and all its contents.
+ */
+async function deleteCollection(prefix: string, bucket: R2Bucket): Promise<void> {
+	const allObjects: R2Objects[] = [];
+	let cursor: string | undefined;
+	do {
+		const listed = await bucket.list({ prefix, cursor });
+		allObjects.push(listed);
+		cursor = listed.truncated ? listed.cursor : undefined;
+	} while (cursor);
+
+	for (const list of allObjects) {
+		for (const obj of list.objects) {
+			await bucket.delete(obj.key);
+		}
 	}
 }
 

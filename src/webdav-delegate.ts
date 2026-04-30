@@ -463,7 +463,24 @@ export class WebDAVDelegateImpl implements WebDAVDelegate {
 
 		// GET/HEAD download or metadata retrieval
 		const obj = await this.env.BUCKET.get(path);
-		if (!obj) return createResponse('Not Found', { status: 404 }, request);
+		if (!obj) {
+			if (request.method === 'HEAD') {
+				const resource = await getResourceInfo(path, this.env.BUCKET);
+				if (resource?.isCollection) {
+					return createResponse(null, {
+						status: 200,
+						headers: {
+							'Content-Type': resource.contentType || 'httpd/unix-directory',
+							'Content-Length': '0',
+							'Last-Modified': resource.updated.toUTCString(),
+							'Accept-Ranges': 'bytes'
+						}
+					}, request);
+				}
+			}
+
+			return createResponse('Not Found', { status: 404 }, request);
+		}
 
 		const contentType = obj.httpMetadata?.contentType || 'application/octet-stream';
 		const size = obj.size;

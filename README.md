@@ -87,6 +87,12 @@ Deploy:
 npm run deploy
 ```
 
+## D1-only deployment (no KV)
+
+An alternate entrypoint stores WebDAV locks in D1 while retaining R2 file storage.
+The original `wrangler.jsonc` and KV entrypoint remain available. See
+[D1 deployment instructions](./README_D1.md) for setup, migrations, and Sites packaging.
+
 ## Client Setup
 
 ### macOS Finder

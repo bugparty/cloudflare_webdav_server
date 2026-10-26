@@ -9,7 +9,11 @@
 		"start": "wrangler dev",
 		"test": "vitest",
 		"test:remote:finder": "node scripts/finder-remote-e2e.mjs",
-		"test:remote:folder-move": "node scripts/folder-move-remote-e2e.mjs"
+		"test:remote:folder-move": "node scripts/folder-move-remote-e2e.mjs",
+		"dev:d1": "wrangler dev --config wrangler.d1.jsonc --port 8080",
+		"deploy:d1": "wrangler deploy --config wrangler.d1.jsonc",
+		"test:d1": "vitest run --config vitest.d1.config.mjs",
+		"db:migrate:d1": "wrangler d1 migrations apply DB --config wrangler.d1.jsonc"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.15.1",

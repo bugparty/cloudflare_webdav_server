@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "s32webdav-d1",
+  "main": "src/index-d1.ts",
+  "compatibility_date": "2026-04-20",
+  "observability": { "enabled": true },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "webdav-d1",
+    "migrations_dir": "migrations-d1"
+  }],
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "webdav-d1-files" }]
+}

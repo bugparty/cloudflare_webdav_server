@@ -1,7 +1,14 @@
+/** Minimal lock storage contract shared by Workers KV and the D1 adapter. */
+export interface LockStorage {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
+  delete(key: string): Promise<void>;
+}
+
 export interface Env {
 	BUCKET: R2Bucket;
 	DB?: D1Database;
-	LOCKS: KVNamespace;
+	LOCKS: LockStorage;
 	LOG_DO?: DurableObjectNamespace;
 	WEBDAV_USERNAME?: string;
 	WEBDAV_PASSWORD?: string;

@@ -1,237 +1,212 @@
 # Cloudflare WebDAV Server
 
+**English** | [简体中文](./README_zh.md)
+
+**Mount your own Cloudflare R2 bucket as a network drive in macOS Finder, Windows File Explorer, and Linux file managers. No server to run: it is a single Cloudflare Worker.**
+
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/bugparty/cloudflare_webdav_server)
 
-A complete WebDAV server implementation for Cloudflare Workers and R2. It is built to work with everyday GUI WebDAV clients on Windows, macOS, and Linux, so you can mount your own private cloud drive without running a server.
+<!--
+  Demo GIF goes here: Finder "Connect to Server", drag a folder in, rename a file, open it.
+  Save it as docs/demo.gif and replace this comment with:
+  <p align="center"><img src="docs/demo.gif" alt="Mounting the server in macOS Finder and copying files" width="720"></p>
+-->
 
+Most WebDAV servers for Cloudflare are tested with `curl`, `litmus`, or mobile apps. Desktop file managers are pickier. Finder mounts a share read-only when locking is missing, uploads with chunked bodies, and writes `._*` sidecar files everywhere. Windows Explorer locks before it writes and sends `PROPPATCH` after uploads. This project handles those flows on purpose, and its tests replay them request by request.
 
-For small personal workloads, this can run within Cloudflare Workers and R2 free allowances where available. R2 is S3-compatible object storage, and Workers provides the HTTP/WebDAV layer at the edge.
+## Why this one
 
-## Highlights
+Feature comparison with other open-source WebDAV servers for Cloudflare R2, based on reading each project's source code on 2026-11-18 (commit in brackets). "No" means no code path for it was found in that commit, and "—" means not checked. Corrections are welcome.
 
-- Full WebDAV request handling for common desktop clients.
-- Compatible with macOS Finder, Windows File Explorer, and Linux GUI file managers such as GNOME Files, KDE Dolphin, and Thunar.
-- Uses Cloudflare R2 as the backing object store.
-- Uses Workers KV for WebDAV lock state.
-- Supports Basic Auth with Cloudflare Workers secrets.
-- Supports `GET`, `HEAD`, `PUT`, `DELETE`, `PROPFIND`, `PROPPATCH`, `MKCOL`, `MOVE`, `COPY`, `LOCK`, `UNLOCK`, and `OPTIONS`.
-- Handles macOS Finder metadata behavior, including `.DS_Store`, AppleDouble `._*` files, lock/unlock flows, and replace workflows.
-- Supports Windows Explorer WebDAV behavior, including lock-aware upload flows.
-- Provides optional debug logs through D1 and Durable Objects, protected by Basic Auth.
-- Includes local and remote compatibility tests.
+| | This project | [r2-webdav](https://github.com/abersheeran/r2-webdav) (`6ce5bfe`) | [Davflare](https://github.com/fanchenggang/Davflare) (`79d16fd`) | [FlareDrive](https://github.com/longern/FlareDrive) (`17e74e5`) | [CFr2-webdav](https://github.com/aigem/CFr2-webdav) (`226f150`) |
+|---|---|---|---|---|---|
+| Runs on | Workers | Workers | Pages | Pages | Workers |
+| `LOCK` / `UNLOCK` (Finder needs it to mount read-write) | Yes, in KV or D1 | Yes, in R2 metadata | Yes, in R2 metadata | No, advertises `DAV: 1` | No, advertises `DAV: 1, 2` but answers `LOCK` with 405 |
+| `PROPPATCH` (sent by Windows Explorer) | Yes | Yes | Yes | No | No |
+| Finder chunked upload with `X-Expected-Entity-Length` | Yes | No | No | No | No |
+| Finder deleting a `._*` sidecar that does not exist | `204`, so "Replace" succeeds | `404` | `404` | — | — |
+| `PUT` streamed into R2, not buffered in Worker memory | Yes, when `Content-Length` is known | No | No | Yes | No |
+| Automated tests | 269 tests, including Finder and Explorer request sequences, plus remote E2E scripts | litmus in CI (basic, copymove, props, locks) | litmus in CI (basic, copymove, props) | None for WebDAV | None |
 
-## Architecture
+**When another project fits better:** if you want a file manager in the browser, FlareDrive and Davflare ship one and this project does not. If you need litmus results in CI today, r2-webdav and Davflare publish them.
 
-```text
-WebDAV client
-    |
-    v
-Cloudflare Worker
-    |
-    +-- R2 bucket: file contents and directory marker objects
-    +-- KV namespace: WebDAV lock tokens
-    +-- D1 database: optional persistent request logs
-    +-- Durable Object: optional live/recent log stream
-```
+## Features
 
-This project maps WebDAV resources to R2 object keys. Directories are represented as key prefixes, with optional directory marker objects ending in `/`.
+- Every method desktop clients use: `OPTIONS`, `GET`, `HEAD`, `PUT`, `DELETE`, `PROPFIND`, `PROPPATCH`, `MKCOL`, `COPY`, `MOVE`, `LOCK`, `UNLOCK`.
+- WebDAV class 1 and 2 locking: lock tokens, `If` header checks, inherited `Depth: infinity` locks, and `423 Locked` on conflicts.
+- Recursive folder `COPY`, `MOVE` and `DELETE`, with `Overwrite: F` returning `412`.
+- Byte-range `GET` (`206`, `416`, `If-Range`), so video and audio can seek.
+- Conditional requests (`If-Match`, `If-None-Match`, `If-Modified-Since`) with R2 ETags that match between `PUT` and `PROPFIND`.
+- File names with spaces, `#`, `%`, `+`, `&` and parentheses.
+- Basic Auth with Workers secrets.
+- Locks in Workers KV, or in D1 if you prefer not to use KV ([D1 deployment](./README_D1.md)).
+- Optional request logs in D1 and a live log stream in a Durable Object, behind the same Basic Auth.
 
-## Quick Deploy
+## Client support
 
-Click the Deploy to Cloudflare button above and follow the Cloudflare setup flow. Cloudflare can provision required Worker resources from the repository configuration during deployment.
+| Client | Status | How it is checked |
+|---|---|---|
+| macOS Finder | Read and write | Finder's request sequence (captured in [`misc/finder_handshake_dump.txt`](./misc/finder_handshake_dump.txt)) is replayed in [`test/macos.spec.ts`](./test/macos.spec.ts), and by `npm run test:remote:finder` against a live deployment |
+| Windows File Explorer | Read and write | The `LOCK` → `PUT` → `PROPFIND` → `UNLOCK` upload flow, `PROPPATCH` and ETag consistency in [`test/windows-client.spec.ts`](./test/windows-client.spec.ts) |
+| GNOME Files, KDE Dolphin, Thunar | Read and write | Used by the author; no dedicated automated test yet |
+| `curl` and scripts | Read and write | Covered by the protocol test suite |
 
-After deployment, configure credentials before exposing the server:
+What the server does for Finder specifically:
 
-```bash
-npx wrangler secret put WEBDAV_USERNAME
-npx wrangler secret put WEBDAV_PASSWORD
-```
+- Answers Finder's `OPTIONS` probe before authentication, since Finder probes before it sends credentials.
+- Rejects the placeholder credentials Finder sends before showing its login prompt, so the prompt appears.
+- Returns `404` for missing `.DS_Store` and `._*` files on `PROPFIND`, which Finder checks constantly.
+- Treats `DELETE` of a missing `._*` file as success, so "Replace" on an existing file does not fail.
+- Accepts chunked uploads that carry `X-Expected-Entity-Length`, and checks the length.
 
-Then connect to:
+## Quick start
 
-```text
-https://your-worker.your-subdomain.workers.dev/
-```
+### One-click deploy
 
-## Manual Deploy
+1. Click **Deploy to Cloudflare** above and follow the setup flow.
+2. Set credentials before you use it. Without them the server accepts every request.
 
-Install dependencies:
+   ```bash
+   npx wrangler secret put WEBDAV_USERNAME
+   npx wrangler secret put WEBDAV_PASSWORD
+   ```
+
+3. Connect your client to `https://your-worker.your-subdomain.workers.dev/`.
+
+### Manual deploy
 
 ```bash
 npm install
-```
-
-Log in to Cloudflare:
-
-```bash
 npx wrangler login
 ```
 
-Create or choose the Cloudflare resources used by the Worker:
+Create these resources and put their names and IDs in `wrangler.jsonc`:
 
-- R2 bucket bound as `BUCKET`
-- KV namespace bound as `LOCKS`
-- Optional D1 database bound as `DB`
-- Optional Durable Object binding named `LOG_DO`
+- R2 bucket bound as `BUCKET` (required)
+- KV namespace bound as `LOCKS` (required)
+- D1 database bound as `DB` (optional, request logs)
+- Durable Object binding `LOG_DO` (optional, live logs)
 
-Update `wrangler.jsonc` with your own resource names and IDs, then set production credentials:
-
-```bash
-npx wrangler secret put WEBDAV_USERNAME
-npx wrangler secret put WEBDAV_PASSWORD
-```
-
-Deploy:
+Set the two secrets shown above, then deploy:
 
 ```bash
 npm run deploy
 ```
 
-## D1-only deployment (no KV)
+To keep locks in D1 instead of KV, see [README_D1.md](./README_D1.md). That entrypoint refuses requests with `503` until both credentials are set.
 
-An alternate entrypoint stores WebDAV locks in D1 while retaining R2 file storage.
-The original `wrangler.jsonc` and KV entrypoint remain available. See
-[D1 deployment instructions](./README_D1.md) for setup, migrations, and Sites packaging.
-
-## Client Setup
+## Connecting a client
 
 ### macOS Finder
 
-1. Open Finder.
-2. Press `Cmd + K`.
-3. Enter `https://your-worker.your-subdomain.workers.dev/`.
-4. Sign in with your WebDAV username and password.
+1. In Finder, press `Cmd + K` (Go → Connect to Server).
+2. Enter `https://your-worker.your-subdomain.workers.dev/`.
+3. Sign in with your WebDAV username and password.
 
 ### Windows File Explorer
 
-1. Open File Explorer.
-2. Right-click "This PC" and choose "Map network drive".
-3. Enter `https://your-worker.your-subdomain.workers.dev/`.
-4. Enable alternate credentials if prompted.
-5. Sign in with your WebDAV username and password.
+1. Right-click **This PC** and choose **Map network drive**.
+2. Enter `https://your-worker.your-subdomain.workers.dev/`.
+3. Tick **Connect using different credentials** and sign in.
 
-### Linux GUI File Managers
+Or from a command prompt:
 
-Most Linux desktop file managers support WebDAV through GVfs, KIO, or similar backends.
+```cmd
+net use * https://your-worker.your-subdomain.workers.dev/ /user:USERNAME PASSWORD
+```
 
-Use one of these URL forms depending on the client:
+### Linux file managers
+
+GNOME Files, Dolphin and Thunar connect through GVfs or KIO. Use whichever form your file manager accepts:
 
 ```text
 davs://your-worker.your-subdomain.workers.dev/
 https://your-worker.your-subdomain.workers.dev/
 ```
 
-## Command Line Examples
-
-List the root directory:
+### Command line
 
 ```bash
-curl -u username:password -X PROPFIND https://your-worker.your-subdomain.workers.dev/
+# List the root
+curl -u user:pass -X PROPFIND -H 'Depth: 1' https://your-worker.your-subdomain.workers.dev/
+# Upload
+curl -u user:pass -T local.txt https://your-worker.your-subdomain.workers.dev/remote.txt
+# Download
+curl -u user:pass -o local.txt https://your-worker.your-subdomain.workers.dev/remote.txt
+# Create a folder
+curl -u user:pass -X MKCOL https://your-worker.your-subdomain.workers.dev/new-folder/
+# Delete
+curl -u user:pass -X DELETE https://your-worker.your-subdomain.workers.dev/remote.txt
 ```
 
-Upload a file:
+More in [USAGE_EXAMPLES.md](./USAGE_EXAMPLES.md).
+
+## Cost
+
+For personal use this can run inside Cloudflare's free allowances for Workers, R2 and KV. Check Cloudflare's current pricing pages for the limits on your account.
+
+## Troubleshooting
+
+**Finder mounts the drive read-only.** Finder only mounts read-write when the server supports locking. Check that the `LOCKS` KV namespace (or the D1 lock table) is bound, then disconnect and reconnect.
+
+**Finder keeps asking for the password.** Make sure both `WEBDAV_USERNAME` and `WEBDAV_PASSWORD` are set as secrets on the deployed Worker.
+
+**Windows says the folder is not valid, or uploads stop at about 50 MB.** The Windows WebClient service must be running, and Windows caps WebDAV file size with the `FileSizeLimitInBytes` registry value (about 50 MB by default). Restarting the service clears cached failures:
+
+```cmd
+net stop webclient
+net start webclient
+```
+
+**Very large uploads fail.** Cloudflare limits request body size by plan. See the Workers limits page for yours.
+
+**Folders with many files feel slow.** R2 is object storage, so listing, moving and deleting a folder touches every object under that prefix.
+
+## How it works
+
+```text
+WebDAV client (Finder, Explorer, GVfs, curl)
+    │  HTTPS + Basic Auth
+    ▼
+Cloudflare Worker
+    ├── R2 bucket ........ file contents; folders are key prefixes with optional "/" marker objects
+    ├── KV or D1 ......... lock tokens with expiry
+    ├── D1 ............... optional persistent request logs
+    └── Durable Object ... optional live log stream
+```
+
+Authenticated debug routes live under `/_debug` (`/_debug/http-log`, `/_debug/write-log`, `/_debug/d1-logs`, `/_debug/do-logs`, `/_debug/all-logs`, `/_debug/live-log`). They can show request paths, so they need the same credentials as WebDAV.
+
+## Development and tests
 
 ```bash
-curl -u username:password -T local-file.txt https://your-worker.your-subdomain.workers.dev/remote-file.txt
+npm run dev            # local server on port 8080
+npm test -- --run      # full test suite (KV entrypoint)
+npm run test:d1        # D1 entrypoint with real local R2 and D1
 ```
 
-Download a file:
-
-```bash
-curl -u username:password https://your-worker.your-subdomain.workers.dev/remote-file.txt -o downloaded-file.txt
-```
-
-Create a directory:
-
-```bash
-curl -u username:password -X MKCOL https://your-worker.your-subdomain.workers.dev/new-folder/
-```
-
-Delete a file:
-
-```bash
-curl -u username:password -X DELETE https://your-worker.your-subdomain.workers.dev/file-to-delete.txt
-```
-
-## Configuration
-
-Required bindings:
-
-- `BUCKET`: Cloudflare R2 bucket used for WebDAV file storage.
-- `LOCKS`: Cloudflare KV namespace used for WebDAV locks.
-
-Optional bindings:
-
-- `DB`: Cloudflare D1 database for persistent request logs.
-- `LOG_DO`: Durable Object namespace for recent and live logs.
-
-Environment variables:
-
-- `WEBDAV_USERNAME`: Basic Auth username.
-- `WEBDAV_PASSWORD`: Basic Auth password.
-
-Security note: if `WEBDAV_USERNAME` or `WEBDAV_PASSWORD` is not configured, the server allows requests for backward compatibility. Do not run a public deployment without credentials.
-
-## Debug Logs
-
-Authenticated debug endpoints are available under `/_debug`, including:
-
-- `/_debug`
-- `/_debug/http-log`
-- `/_debug/write-log`
-- `/_debug/d1-logs`
-- `/_debug/do-logs`
-- `/_debug/all-logs`
-- `/_debug/live-log`
-
-These routes can expose request paths and operational metadata, so they are protected by the same Basic Auth credentials as the WebDAV server.
-
-## Development
-
-Run locally:
-
-```bash
-npm run dev
-```
-
-Run tests:
-
-```bash
-npm test -- --run
-```
-
-Run remote compatibility checks after deploying:
+Run the Finder and folder-move sequences against a deployed server. Each script works in its own temporary folder and deletes it afterwards (`WEBDAV_REMOTE_KEEP=1` keeps it):
 
 ```bash
 WEBDAV_REMOTE_URL=https://your-worker.your-subdomain.workers.dev/ \
 WEBDAV_REMOTE_USER=username \
 WEBDAV_REMOTE_PASS=password \
 npm run test:remote:finder
-```
 
-```bash
 WEBDAV_REMOTE_URL=https://your-worker.your-subdomain.workers.dev/ \
 WEBDAV_REMOTE_USER=username \
 WEBDAV_REMOTE_PASS=password \
 npm run test:remote:folder-move
 ```
 
-## Notes And Limits
+## More docs
 
-Cloudflare R2 is object storage, not a traditional filesystem. Directory operations are implemented with object prefixes and listing calls.
-
-This means:
-
-- Single-file uploads and downloads are straightforward.
-- Large directory listings depend on R2 `list` performance.
-- Folder `MOVE`, `COPY`, and `DELETE` operations are recursive object operations.
-- Very large flat directories may feel slower in GUI clients than a local filesystem.
-
-For personal WebDAV storage, backups, document sync, and small team workflows, this tradeoff keeps the deployment simple and serverless.
-
-## Related Docs
-
-- [Authentication setup](./README_AUTH.md)
+- [Authentication](./README_AUTH.md)
+- [D1-only deployment](./README_D1.md)
 - [Usage examples](./USAGE_EXAMPLES.md)
-- [macOS compatibility plan](./mac-compatibility-plan.md)
-- [Windows compatibility plan](./window-compatibility-plan.md)
+- [macOS Finder compatibility notes](./mac-compatibility-plan.md)
+- [Windows Explorer compatibility notes](./window-compatibility-plan.md)
+
+## Contributing
+
+Issues and pull requests are welcome, especially reports from WebDAV clients that are not in the table above. If a client misbehaves, the request log at `/_debug/http-log` right after the failure is the most useful thing to attach.

@@ -210,3 +210,7 @@ npm run test:remote:folder-move
 ## Contributing
 
 Issues and pull requests are welcome, especially reports from WebDAV clients that are not in the table above. If a client misbehaves, the request log at `/_debug/http-log` right after the failure is the most useful thing to attach.
+
+## License
+
+[MIT](./LICENSE)

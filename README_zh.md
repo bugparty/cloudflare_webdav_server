@@ -210,3 +210,7 @@ npm run test:remote:folder-move
 ## 参与贡献
 
 欢迎提 issue 和 PR，特别是上表之外的 WebDAV 客户端的使用反馈。客户端出问题时，紧接着导出 `/_debug/http-log` 的请求日志附上，最有助于定位。
+
+## 许可证
+
+[MIT](./LICENSE)

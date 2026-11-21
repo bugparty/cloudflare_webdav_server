@@ -6,6 +6,8 @@
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/bugparty/cloudflare_webdav_server)
 
+**Deploy with ChatGPT Sites.** If Sites is available in your workspace, give your ChatGPT or Codex agent this repository URL to set up a hosted WebDAV server backed by Cloudflare R2 and D1. See [Deploy with ChatGPT Sites](#deploy-with-chatgpt-sites).
+
 <!--
   Demo GIF goes here: Finder "Connect to Server", drag a folder in, rename a file, open it.
   Save it as docs/demo.gif and replace this comment with:
@@ -60,6 +62,16 @@ What the server does for Finder specifically:
 - Accepts chunked uploads that carry `X-Expected-Entity-Length`, and checks the length.
 
 ## Quick start
+
+### Deploy with ChatGPT Sites
+
+This project has been deployed on ChatGPT Sites as a server-backed Cloudflare Worker. R2 stores your files and D1 stores WebDAV locks. The Sites setup uses the D1-backed entrypoint and managed storage bindings.
+
+Open a ChatGPT or Codex session with Sites available and give it this prompt:
+
+> Deploy [bugparty/cloudflare_webdav_server](https://github.com/bugparty/cloudflare_webdav_server) as a new ChatGPT Site using the [Sites deployment notes](https://github.com/bugparty/cloudflare_webdav_server/blob/master/README_D1.md#sites). Use R2 for files and D1 for locks. Set up Basic Auth with Sites runtime secrets, then return the WebDAV URL and verify authenticated access.
+
+The agent needs to prepare the Sites build and migration for your deployment. Use `src/index-d1.ts` as the Worker entrypoint, bundle it to `dist/server/index.js`, declare the `BUCKET` (R2) and `DB` (D1) bindings in `.openai/hosting.json`, and include the D1 migrations. Set `WEBDAV_USERNAME` and `WEBDAV_PASSWORD` as runtime secrets before publishing. For Finder and other standard WebDAV clients, use a public Sites URL with WebDAV Basic Auth enabled. See the [Sites deployment notes](./README_D1.md#sites) for details.
 
 ### One-click deploy
 
